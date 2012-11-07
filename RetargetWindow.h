@@ -26,10 +26,10 @@ private:
     void writePix(QImage image);
     //QProgressBar *progressBar;
 private slots:
+    void on_actionNew_triggered();
     void on_retargetButton_clicked();
-    void on_pushButton_2_clicked();
-    void on_pushButton_clicked();
-    void actionNew_Triggered();
+    void on_showEFuncButton_clicked();
+    void on_showImageButton_clicked();
 };
 
 #endif	/* _RETARGETWINDOW_H */

@@ -53,6 +53,12 @@
        </item>
        <item row="0" column="2">
         <widget class="QPushButton" name="retargetButton">
+         <property name="maximumSize">
+          <size>
+           <width>80</width>
+           <height>16777215</height>
+          </size>
+         </property>
          <property name="text">
           <string>Retarget</string>
          </property>

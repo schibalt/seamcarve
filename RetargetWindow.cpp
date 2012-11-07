@@ -19,9 +19,13 @@ RetargetWindow::RetargetWindow()
     widget.setupUi(this);
     scene = new QGraphicsScene(this);
     widget.graphicsView->setScene(scene);
+
+    /*
     connect(this->widget.actionNew, SIGNAL(triggered(bool)), this, SLOT(actionNew_Triggered()));
-    connect(this->widget.showImageButton, SIGNAL(clicked()), this, SLOT(on_pushButton_clicked()));
-    connect(this->widget.showEFuncButton, SIGNAL(clicked()), this, SLOT(on_pushButton_2_clicked()));
+    connect(this->widget.showImageButton, SIGNAL(clicked()), this, SLOT(eFuncButton_clicked()));
+    connect(this->widget.showEFuncButton, SIGNAL(clicked()), this, SLOT(showButton_clicked()));
+    */
+
     //progressBar = new QProgressBar();
     //cout<<progressBar->maximum()<<endl;
     //widget.statusbar->addWidget( progressBar, 1 );
@@ -29,51 +33,6 @@ RetargetWindow::RetargetWindow()
 
 RetargetWindow::~RetargetWindow()
 {
-}
-
-void RetargetWindow::actionNew_Triggered()
-{
-    widget.statusbar->showMessage("selecting new file");
-    QString filename;
-    bool isMatch = false;
-    QStringList fileExtensionList;
-
-    filename = QFileDialog::getOpenFileName(this, tr("Find Files"), QDir::currentPath());
-    fileExtensionList << "BMP" << "GIF" << "JPG" << "JPEG" << "PNG" << "PBM"
-            << "PGM" << "PPM" << "XBM" << "XPM";
-
-    QStringList splitFilenameList = filename.split(".");
-    if (splitFilenameList.size() > 1)
-    {
-        QString fileExtension = splitFilenameList[splitFilenameList.size() - 1];
-        //cout << fileExtension.toStdString() << endl;
-        isMatch = fileExtensionList.contains(fileExtension.toUpper());
-    }
-
-    widget.statusbar->showMessage(filename);
-
-    if (!isMatch)
-    {
-        widget.statusbar->showMessage("this type of file isn't supported");
-    } else
-    {
-        if (retarget.setImagePath(filename.toStdString()))
-        {
-            widget.statusbar->showMessage("imagepath set to " + filename);
-        } else
-        {
-            widget.statusbar->showMessage("imagepath set failure");
-        }
-        if (retarget.setImage(filename.toStdString()))
-        {
-            widget.statusbar->showMessage("image set to " + filename);
-        } else
-        {
-            widget.statusbar->showMessage("imagepath set failure");
-        }
-        showImage(retarget.getImage());
-    }
-
 }
 
 bool RetargetWindow::showImage(QImage image)
@@ -170,14 +129,24 @@ void RetargetWindow::writePix(QImage image)
     widget.progressBar->setValue(100);
 }
 
-void RetargetWindow::on_pushButton_clicked()
+void RetargetWindow::on_showImageButton_clicked()
 {
+    if(!retarget.isImageSet())
+    {
+        widget.statusbar->showMessage("Go to File > New and select an image");
+        return;
+    }
     showImage();
 }
 
-void RetargetWindow::on_pushButton_2_clicked()
+void RetargetWindow::on_showEFuncButton_clicked()
 {
-    retarget.setEFunc();
+    if(!retarget.isImageSet())
+    {
+        widget.statusbar->showMessage("Go to File > New and select an image");
+        return;
+    }
+    retarget.setEnergy();
     // the items (lines and points) in the graphicsview
     QList<QGraphicsItem *> list = (*scene).items();
 
@@ -191,10 +160,10 @@ void RetargetWindow::on_pushButton_2_clicked()
             delete *it;
         }
     }
-    QImage image = retarget.getEFunc();
+    QImage image = retarget.getEnergy();
     QGraphicsPixmapItem* Qgpmi = new QGraphicsPixmapItem(QPixmap::fromImage(image));
     (*scene).addItem(Qgpmi);
-    widget.graphicsView->setSceneRect(QRect(0,0,image.width(),image.height()));
+    widget.graphicsView->setSceneRect(QRect(0, 0, image.width(), image.height()));
     QString imgPath;
     stringstream ss;
     ss << (int) image.format();
@@ -204,12 +173,117 @@ void RetargetWindow::on_pushButton_2_clicked()
 
 void RetargetWindow::on_retargetButton_clicked()
 {
+    if(!retarget.isImageSet())
+    {
+        widget.statusbar->showMessage("Go to File > New and select an image");
+        return;
+    }
+    if(!retarget.isEnergySet())
+    {
+        retarget.setEnergy();
+    }
+
+    bool viewTooShort = false;
+    bool viewTooSkinny = false;
+
+    cout << "view is " << widget.graphicsView->width() << ", " << widget.graphicsView->height();
+    cout << " and image is " << retarget.getImage().width() << ", " << retarget.getImage().height() << endl;
+
     if(widget.graphicsView->width() < retarget.getImage().width())
     {
-        retarget.verticalSeams();
+        viewTooSkinny = true;
+        cout << "making vert seam matrix" << endl;
+        retarget.setVerticalSeamTable();
     }
     if(widget.graphicsView->height() < retarget.getImage().height())
     {
-        retarget.horizontalSeams();
+        viewTooShort = true;
+        cout << "making lat seam matrix" << endl;
+        retarget.getHorizontalSeamTable();
+    }
+    cout << "vertical seam values" << endl;
+
+    for(int i = 0; i < retarget.getImage().width(); i++)
+    {
+        cout << retarget.getVertSeams()[retarget.getImage().height() - 1][i] << " ";
+    }
+    cout << endl << "lateral seam values" << endl;
+
+    for(int i = 0; i < retarget.getImage().height(); i++)
+    {
+        cout << retarget.getLatSeams()[i][retarget.getImage().width() - 1] << " ";
+    }
+    cout << endl;
+
+    //status bar info
+    if(!viewTooShort && !viewTooSkinny)
+    {
+        widget.statusbar->showMessage("The view isn't small enough to retarget the image");
+    }
+    else
+    {
+        stringstream ss;
+        ss << "Retargeting " << retarget.getImage().width() << ", " << retarget.getImage().height() << " image to ";
+
+        if(viewTooSkinny)
+        {
+            ss << widget.graphicsView->width();
+        }else
+        {
+            ss << retarget.getImage().width();
+        }
+        ss << ", ";
+        if(viewTooShort)
+        {
+            ss << widget.graphicsView->height();
+        }else{
+            ss << retarget.getImage().height();
+        }
+        widget.statusbar->showMessage(QString::fromStdString(ss.str()));
+    }
+
+}
+
+void RetargetWindow::on_actionNew_triggered()
+{
+    widget.statusbar->showMessage("selecting new file");
+    QString filename;
+    bool isMatch = false;
+    QStringList fileExtensionList;
+
+    filename = QFileDialog::getOpenFileName(this, tr("Find Files"), QDir::currentPath());
+    fileExtensionList << "BMP" << "GIF" << "JPG" << "JPEG" << "PNG" << "PBM"
+            << "PGM" << "PPM" << "XBM" << "XPM";
+
+    QStringList splitFilenameList = filename.split(".");
+    if (splitFilenameList.size() > 1)
+    {
+        QString fileExtension = splitFilenameList[splitFilenameList.size() - 1];
+        //cout << fileExtension.toStdString() << endl;
+        isMatch = fileExtensionList.contains(fileExtension.toUpper());
+    }
+
+    widget.statusbar->showMessage(filename);
+
+    if (!isMatch)
+    {
+        widget.statusbar->showMessage("this type of file isn't supported");
+    } else
+    {
+        if (retarget.setImagePath(filename.toStdString()))
+        {
+            widget.statusbar->showMessage("imagepath set to " + filename);
+        } else
+        {
+            widget.statusbar->showMessage("imagepath set failure");
+        }
+        if (retarget.setImage(filename.toStdString()))
+        {
+            widget.statusbar->showMessage("image set to " + filename);
+        } else
+        {
+            widget.statusbar->showMessage("imagepath set failure");
+        }
+        showImage(retarget.getImage());
     }
 }

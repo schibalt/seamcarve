@@ -20,18 +20,24 @@ public:
     bool setImage();
     bool setImage(std::string path);
     QImage getImage();
-    QImage setEFunc();
-    QImage Sobel();
-    QImage getEFunc();
-    void verticalSeams();
-    void horizontalSeams();
+    QImage setEnergy();
+    QImage getEnergy();
+    void setVerticalSeamTable();
+    void getHorizontalSeamTable();
+    bool isEnergySet();
+    bool isImageSet();
+    int** getLatSeams();
+    int** getVertSeams();
+    QPoint** setVertSeams();
+    QPoint** setLatSeams();
 private:
     std::string imagePath;
     QImage image;
-    QImage eFunc;
-    double **vertSeams;
-    double **latSeams;
-
+    QImage energyFunction;
+    int **vertSeams;
+    int **latSeams;
+    bool energySet;
+    bool imageSet;
 };
 
 #endif	/* RETARGETING_H */

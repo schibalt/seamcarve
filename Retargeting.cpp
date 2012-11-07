@@ -6,7 +6,7 @@
  */
 
 #include "Retargeting.h"
-#include <qpixmap.h>
+#include <QGraphicsPixmapItem>
 #include <iostream>
 #include <sstream>
 #include <cstdio>
@@ -15,6 +15,8 @@ using namespace std;
 
 Retargeting::Retargeting()
 {
+    energySet = false;
+    imageSet = false;
 }
 
 Retargeting::Retargeting(const Retargeting& orig)
@@ -33,7 +35,6 @@ bool Retargeting::setImagePath(string path)
 
 bool Retargeting::setImage(string path)
 {
-
     QString QsPath;
     cout << "trying to set " << path << " as image for retarget" << endl;
     image.load(QsPath.fromStdString(path));
@@ -58,6 +59,7 @@ bool Retargeting::setImage()
     delete [] latSeams;
 
     cout << "format is " << image.format() << endl;
+    imageSet = true;
     return true;
 }
 
@@ -68,30 +70,33 @@ string Retargeting::getImagePath()
 
 QImage Retargeting::getImage()
 {
+    imageSet = true;
     return image;
 }
 
-QImage Retargeting::setEFunc()
+QImage Retargeting::setEnergy()
 {
     int n = image.width();
     int m = image.height();
 
     cout << "copying.  width = " << image.width() << " height = " << image.height() << endl;
-    eFunc = image.copy(0, 0, image.width(), image.height());
-    QRgb px;
+    energyFunction = image.copy(0, 0, image.width(), image.height());
 
     int upComp;
     int downComp;
     int leftComp;
     int rightComp;
 
+    /*
+    QRgb px;
     int uppx;
     int downpx;
     int leftpx;
     int rightpx;
+    int maxenergy;
+    */
 
     int energy;
-    int maxenergy;
 
     for(int i = 1; i < n - 1; i++)
     {
@@ -104,68 +109,103 @@ QImage Retargeting::setEFunc()
 
             energy = abs(upComp + downComp + leftComp + rightComp);
 
-            if(eFunc.format() != 3)
+            if(energyFunction.format() != 3)
             {
-                eFunc.setPixel(i, j, qRgb(energy, energy, energy));
+                energyFunction.setPixel(i, j, qRgb(energy, energy, energy));
             }else
             {
-                eFunc.setPixel(i, j, energy);
+                energyFunction.setPixel(i, j, energy);
             }
         }
     }
     //cout << "maxenergy = " << maxenergy / (m * n) << endl;
-    return eFunc;
+    energySet = true;
+    return energyFunction;
 }
 
-void Retargeting::verticalSeams()
+/*
+QPoint** setVertSeams(int widthDifference)
+{
+    for(int s = 0; s < widthDifference; s++)
+    {
+
+    }
+}
+
+QPoint** setLatSeams(int heightDifference)
+{
+
+}*/
+
+void Retargeting::setVerticalSeamTable()
 {
     int n = image.width();
     int m = image.height();
 
     // Allocate memory
-    vertSeams = new double*[n];
+    vertSeams = new int*[n];
 
     for (int i = 0; i < n; ++i)
-        vertSeams[i] = new double[m];
+        vertSeams[i] = new int[m];
 
     for(int i = 1; i < n; i++)
     {
         for(int j = 1; j < m - 1; j++)
         {
-            int upLeft = qGray(eFunc.pixel(i - 1, j - 1));
-            int up = qGray(eFunc.pixel(i - 1, j));
-            int upRight = qGray(eFunc.pixel(i - 1, j + 1));
+            int upLeft = qGray(energyFunction.pixel(i - 1, j - 1));
+            int up = qGray(energyFunction.pixel(i - 1, j));
+            int upRight = qGray(energyFunction.pixel(i - 1, j + 1));
 
-            vertSeams[i][j] = qGray(eFunc.pixel(i, j)) + min(upLeft, min(up, upRight));
+            vertSeams[i][j] = qGray(energyFunction.pixel(i, j)) + min(upLeft, min(up, upRight));
         }
     }
 }
 
-void Retargeting::horizontalSeams()
+void Retargeting::getHorizontalSeamTable()
 {
     int n = image.width();
     int m = image.height();
 
     // Allocate memory
-    latSeams = new double*[n];
+    latSeams = new int*[n];
 
     for (int i = 0; i < n; ++i)
-        latSeams[i] = new double[m];
+        latSeams[i] = new int[m];
 
     for(int j = 1; j < m; j++)
     {
         for(int i = 1; i < n - 1; i++)
         {
-            int leftDown = qGray(eFunc.pixel(i - 1, j - 1));
-            int left = qGray(eFunc.pixel(i, j - 1));
-            int leftUp = qGray(eFunc.pixel(i + 1, j - 1));
+            int leftDown = qGray(energyFunction.pixel(i + 1, j - 1));
+            int left = qGray(energyFunction.pixel(i, j - 1));
+            int leftUp = qGray(energyFunction.pixel(i - 1, j - 1));
 
-            vertSeams[i][j] = qGray(eFunc.pixel(i, j)) + min(leftDown, min(left, leftUp));
+            latSeams[i][j] = qGray(energyFunction.pixel(i, j)) + min(leftDown, min(left, leftUp));
         }
     }
 }
 
-QImage Retargeting::getEFunc()
+bool Retargeting::isEnergySet()
 {
-    return eFunc;
+    return energySet;
+}
+
+bool Retargeting::isImageSet()
+{
+    return imageSet;
+}
+
+QImage Retargeting::getEnergy()
+{
+    return energyFunction;
+}
+
+int** Retargeting::getVertSeams()
+{
+    return vertSeams;
+}
+
+int** Retargeting::getLatSeams()
+{
+    return latSeams;
 }
