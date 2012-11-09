@@ -22,14 +22,12 @@ public:
     QImage getImage();
     QImage setEnergy();
     QImage getEnergy();
-    void setVerticalSeamTable();
-    void getHorizontalSeamTable();
+    void getVerticalSeamTable();
+    void getLateralSeamTable();
     bool isEnergySet();
     bool isImageSet();
-    int** getLatSeams();
-    int** getVertSeams();
-    QPoint** setVertSeams();
-    QPoint** setLatSeams();
+    bool** setVertSeams(int widthDifference);
+    bool** setLatSeams(int heightDifference);
 private:
     std::string imagePath;
     QImage image;
@@ -38,6 +36,8 @@ private:
     int **latSeams;
     bool energySet;
     bool imageSet;
+    bool **vertPixelsRemoved;
+    bool **latPixelsRemoved;
 };
 
 #endif	/* RETARGETING_H */

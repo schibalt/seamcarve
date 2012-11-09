@@ -38,10 +38,10 @@ RetargetWindow::~RetargetWindow()
 bool RetargetWindow::showImage(QImage image)
 {
     // the items (lines and points) in the graphicsview
-    QList<QGraphicsItem *> list = (*scene).items();
+    QList<QGraphicsItem*> list = (*scene).items();
 
     // delete everything.  this is a new case.
-    QList<QGraphicsItem *>::Iterator it = list.begin();
+    QList<QGraphicsItem*>::Iterator it = list.begin();
     for (; it != list.end(); ++it)
     {
         if (*it)
@@ -65,10 +65,10 @@ bool RetargetWindow::showImage(QImage image)
 bool RetargetWindow::showImage()
 {
     // the items (lines and points) in the graphicsview
-    QList<QGraphicsItem *> list = (*scene).items();
+    QList<QGraphicsItem*> list = (*scene).items();
 
     // delete everything.  this is a new case.
-    QList<QGraphicsItem *>::Iterator it = list.begin();
+    QList<QGraphicsItem*>::Iterator it = list.begin();
     for (; it != list.end(); ++it)
     {
         if (*it)
@@ -80,7 +80,7 @@ bool RetargetWindow::showImage()
     QImage image = retarget.getImage();
     QGraphicsPixmapItem* Qgpmi = new QGraphicsPixmapItem(QPixmap::fromImage(image));
     (*scene).addItem(Qgpmi);
-    widget.graphicsView->setSceneRect(QRect(0,0,image.width(),image.height()));
+    widget.graphicsView->setSceneRect(QRect(0, 0, image.width(), image.height()));
     QString imgPath;
     stringstream ss;
     ss << (int) image.format();
@@ -131,7 +131,7 @@ void RetargetWindow::writePix(QImage image)
 
 void RetargetWindow::on_showImageButton_clicked()
 {
-    if(!retarget.isImageSet())
+    if (!retarget.isImageSet())
     {
         widget.statusbar->showMessage("Go to File > New and select an image");
         return;
@@ -141,17 +141,17 @@ void RetargetWindow::on_showImageButton_clicked()
 
 void RetargetWindow::on_showEFuncButton_clicked()
 {
-    if(!retarget.isImageSet())
+    if (!retarget.isImageSet())
     {
         widget.statusbar->showMessage("Go to File > New and select an image");
         return;
     }
     retarget.setEnergy();
     // the items (lines and points) in the graphicsview
-    QList<QGraphicsItem *> list = (*scene).items();
+    QList<QGraphicsItem*> list = (*scene).items();
 
     // delete everything.  this is a new case.
-    QList<QGraphicsItem *>::Iterator it = list.begin();
+    QList<QGraphicsItem*>::Iterator it = list.begin();
     for (; it != list.end(); ++it)
     {
         if (*it)
@@ -173,12 +173,12 @@ void RetargetWindow::on_showEFuncButton_clicked()
 
 void RetargetWindow::on_retargetButton_clicked()
 {
-    if(!retarget.isImageSet())
+    if (!retarget.isImageSet())
     {
         widget.statusbar->showMessage("Go to File > New and select an image");
         return;
     }
-    if(!retarget.isEnergySet())
+    if (!retarget.isEnergySet())
     {
         retarget.setEnergy();
     }
@@ -189,34 +189,23 @@ void RetargetWindow::on_retargetButton_clicked()
     cout << "view is " << widget.graphicsView->width() << ", " << widget.graphicsView->height();
     cout << " and image is " << retarget.getImage().width() << ", " << retarget.getImage().height() << endl;
 
-    if(widget.graphicsView->width() < retarget.getImage().width())
+    if (widget.graphicsView->width() < retarget.getImage().width())
     {
         viewTooSkinny = true;
         cout << "making vert seam matrix" << endl;
-        retarget.setVerticalSeamTable();
+        retarget.getVerticalSeamTable();
     }
-    if(widget.graphicsView->height() < retarget.getImage().height())
+    /*
+    if (widget.graphicsView->height() < retarget.getImage().height())
     {
         viewTooShort = true;
         cout << "making lat seam matrix" << endl;
-        retarget.getHorizontalSeamTable();
+        retarget.getLateralSeamTable();
     }
-    cout << "vertical seam values" << endl;
-
-    for(int i = 0; i < retarget.getImage().width(); i++)
-    {
-        cout << retarget.getVertSeams()[retarget.getImage().height() - 1][i] << " ";
-    }
-    cout << endl << "lateral seam values" << endl;
-
-    for(int i = 0; i < retarget.getImage().height(); i++)
-    {
-        cout << retarget.getLatSeams()[i][retarget.getImage().width() - 1] << " ";
-    }
-    cout << endl;
+    */
 
     //status bar info
-    if(!viewTooShort && !viewTooSkinny)
+    if (!viewTooShort && !viewTooSkinny)
     {
         widget.statusbar->showMessage("The view isn't small enough to retarget the image");
     }
@@ -225,18 +214,21 @@ void RetargetWindow::on_retargetButton_clicked()
         stringstream ss;
         ss << "Retargeting " << retarget.getImage().width() << ", " << retarget.getImage().height() << " image to ";
 
-        if(viewTooSkinny)
+        if (viewTooSkinny)
         {
             ss << widget.graphicsView->width();
-        }else
+        }
+        else
         {
             ss << retarget.getImage().width();
         }
         ss << ", ";
-        if(viewTooShort)
+        if (viewTooShort)
         {
             ss << widget.graphicsView->height();
-        }else{
+        }
+        else
+        {
             ss << retarget.getImage().height();
         }
         widget.statusbar->showMessage(QString::fromStdString(ss.str()));
@@ -253,7 +245,7 @@ void RetargetWindow::on_actionNew_triggered()
 
     filename = QFileDialog::getOpenFileName(this, tr("Find Files"), QDir::currentPath());
     fileExtensionList << "BMP" << "GIF" << "JPG" << "JPEG" << "PNG" << "PBM"
-            << "PGM" << "PPM" << "XBM" << "XPM";
+                      << "PGM" << "PPM" << "XBM" << "XPM";
 
     QStringList splitFilenameList = filename.split(".");
     if (splitFilenameList.size() > 1)
@@ -268,19 +260,22 @@ void RetargetWindow::on_actionNew_triggered()
     if (!isMatch)
     {
         widget.statusbar->showMessage("this type of file isn't supported");
-    } else
+    }
+    else
     {
         if (retarget.setImagePath(filename.toStdString()))
         {
             widget.statusbar->showMessage("imagepath set to " + filename);
-        } else
+        }
+        else
         {
             widget.statusbar->showMessage("imagepath set failure");
         }
         if (retarget.setImage(filename.toStdString()))
         {
             widget.statusbar->showMessage("image set to " + filename);
-        } else
+        }
+        else
         {
             widget.statusbar->showMessage("imagepath set failure");
         }
