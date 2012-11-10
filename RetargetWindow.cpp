@@ -146,7 +146,7 @@ void RetargetWindow::on_showEFuncButton_clicked()
         widget.statusbar->showMessage("Go to File > New and select an image");
         return;
     }
-    retarget.setEnergy();
+    retarget.setEnergy(retarget.energyFunction(retarget.getImage()));
     // the items (lines and points) in the graphicsview
     QList<QGraphicsItem*> list = (*scene).items();
 
@@ -191,18 +191,18 @@ void RetargetWindow::on_retargetButton_clicked()
     {
         viewTooSkinny = true;
         cout << "making vert seam matrix" << endl;
-        retarget.setVerticalSeamTable();
-        retarget.setVertSeams(abs(widthDiff));
+        retarget.carveVertSeams(abs(widthDiff));
     }
 
+    /*
     int heightDiff = widget.graphicsView->height() - retarget.getImage().height();
 
-    /*
     if (heightDiff < 0)
     {
         viewTooShort = true;
         cout << "making lat seam matrix" << endl;
-        retarget.getLateralSeamTable();
+        retarget.setLateralSeamTable();
+        retarget.setLatSeams(abs(heightDiff));
     }
     */
 
@@ -228,7 +228,6 @@ void RetargetWindow::on_retargetButton_clicked()
 
         widget.statusbar->showMessage(QString::fromStdString(ss.str()));
     }
-
 }
 
 void RetargetWindow::on_actionNew_triggered()
@@ -246,26 +245,24 @@ void RetargetWindow::on_actionNew_triggered()
     if (splitFilenameList.size() > 1)
     {
         QString fileExtension = splitFilenameList[splitFilenameList.size() - 1];
-        //cout << fileExtension.toStdString() << endl;
-        isMatch = fileExtensionList.contains(fileExtension.toUpper());
+
+        fileExtension = fileExtension.toUpper();
+        isMatch = fileExtensionList.contains(fileExtension);
     }
 
     widget.statusbar->showMessage(filename);
 
-    if (!isMatch)
-        widget.statusbar->showMessage("this type of file isn't supported");
-    else
+    if (isMatch)
     {
-        if (retarget.setImagePath(filename.toStdString()))
-            widget.statusbar->showMessage("imagepath set to " + filename);
-        else
-            widget.statusbar->showMessage("imagepath set failure");
+        string svFilename = filename.toStdString();
 
-        if (retarget.setImage(filename.toStdString()))
+        if (retarget.setImage(svFilename))
             widget.statusbar->showMessage("image set to " + filename);
         else
             widget.statusbar->showMessage("imagepath set failure");
 
         showImage(retarget.getImage());
     }
+    else
+        widget.statusbar->showMessage("this type of file isn't supported");
 }

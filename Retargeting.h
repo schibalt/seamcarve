@@ -17,43 +17,34 @@ class Retargeting
         Retargeting();
         Retargeting(const Retargeting& orig);
         virtual ~Retargeting();
-        bool setImagePath(std::string path);
         std::string getImagePath();
-        bool setImage();
         bool setImage(std::string path);
         QImage getImage();
         QImage setEnergy();
         QImage getEnergy();
-        void setVerticalSeamTable();
-        void setLateralSeamTable();
         bool isEnergySet();
         bool isImageSet();
-        bool** setVertSeams(int widthDifference);
-        bool** setLatSeams(int heightDifference);
+        void setEnergy(QImage);
+        QImage energyFunction(QImage );
+
+        //return pixel masks
+        void carveVertSeams(int );
+        void carveLatSeams(int );
     private:
-        std::string imagePath;
         QImage image;
-        struct sort_pred;
-        QImage energyFunction;
-        int** vertSeams;
-        int** latSeams;
+        QImage energy;
+        QImage retargetedImage;
+
+        //set cumulative energy matrices
+        void setVerticalSeamTable(int m, int n);
+        void setLateralSeamTable(int m, int n);
+
+        std::string imagePath;
+        struct sort_pred;        
+        enum SeamDirections { UP, UPRIGHT, UPLEFT, LEFT, LEFTDOWN, LEFTLEFTUP};
         bool energySet;
         bool imageSet;
-        bool** vertPixelsRemoved;
-        bool** latPixelsRemoved;
 };
-
-/*
-template < class T1, class T2, class Pred = std::less<T> >
-struct sort_pair_second
-{
-    bool operator()(const std::pair<T1, T2>&left, const std::pair<T1, T2>&right)
-    {
-        Pred p;
-        return p(left.first, right.first);
-    }
-};
-*/
 
 #endif  /* RETARGETING_H */
 
