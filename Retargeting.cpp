@@ -10,6 +10,7 @@
 #include <iostream>
 #include <sstream>
 #include <cstdio>
+#include <algorithm>
 #include <fstream>
 
 using namespace std;
@@ -31,24 +32,23 @@ Retargeting::~Retargeting()
     cout << "imagepath deleted" << endl;
     //delete &energyFunction;
     cout << "energyFunction deleted" << endl;
-    */
-
+    
     // De-Allocate memory to prevent memory leak
     for (int i = 0; i < image.width(); ++i)
         delete [] vertSeams[i];
+    
     cout << "vertSeams 2nd dim arrays deleted" << endl;
     delete [] vertSeams;
     cout << "vertSeams deleted" << endl;
-
+    
     // De-Allocate memory to prevent memory leak
     //for (int i = 0; i < image.height(); ++i)
     //delete [] latSeams[i];
-
-    /*
+    
     cout << "latSeams 2nd dim arrays deleted" << endl;
     //delete [] latSeams;
     cout << "latSeams deleted" << endl;
-
+    
     //delete &image;
     cout << "image deleted" << endl;
     //delete &energySet;
@@ -56,17 +56,18 @@ Retargeting::~Retargeting()
     //delete &imageSet;
     cout << "imageSet deleted" << endl;
     */
-
+    
     /*
     // De-Allocate memory to prevent memory leak
     for (int i = 0; i < image.width(); ++i)
         delete [] vertPixelsRemoved[i];
+    
     delete [] vertPixelsRemoved;
-
+    
     // De-Allocate memory to prevent memory leak
     for (int i = 0; i < image.height(); ++i)
         delete [] latPixelsRemoved[i];
-
+    
     delete [] latPixelsRemoved;
     */
 }
@@ -91,7 +92,7 @@ bool Retargeting::setImage()
     QString QsPath;
     cout << "trying to set " << imagePath << " as image for retarget" << endl;
     image.load(QsPath.fromStdString(imagePath));
-
+    
     cout << "format is " << image.format() << endl;
     imageSet = true;
     return true;
@@ -113,18 +114,18 @@ QImage Retargeting::setEnergy()
     //there are usually m rows in a matrix but QImage uses cartesian coordinates
     //so there are m columns (x-sub-m)
     int m = image.width();
-
+    
     //vice versa with n (n is y-sub-n)
     int n = image.height();
-
+    
     cout << "copying.  width = " << image.width() << " height = " << image.height() << endl;
     energyFunction = image.copy(0, 0, image.width(), image.height());
-
-    int upComp;
-    int downComp;
-    int leftComp;
-    int rightComp;
-
+    
+    int upComp = 0;
+    int downComp = 0;
+    int leftComp = 0;
+    int rightComp = 0;
+    
     /*
     QRgb px;
     int uppx;
@@ -133,30 +134,43 @@ QImage Retargeting::setEnergy()
     int rightpx;
     int maxenergy;
     */
-
+    
     int energy;
-
-    for (int i = 1; i < m - 1; i++)
+    
+    /*for (int i = 1; i < m - 1; i++)
     {
-        for (int j = 1; j < n - 1; j++)
+        for (int j = 1; j < n - 1; j++)*/
+    for (int i = 0; i < m ; i++)
+        for (int j = 0; j < n; j++)
         {
-            upComp = qGray(image.pixel(i, j)) - qGray(image.pixel(i - 1, j));
-            downComp = qGray(image.pixel(i, j)) - qGray(image.pixel(i + 1, j));
-            leftComp = qGray(image.pixel(i, j)) - qGray(image.pixel(i, j - 1));
-            rightComp = qGray(image.pixel(i, j)) - qGray(image.pixel(i , j + 1));
-
+            if (i > 0)
+                upComp = qGray(image.pixel(i, j)) - qGray(image.pixel(i - 1, j));
+                
+            if (i < m - 1)
+                downComp = qGray(image.pixel(i, j)) - qGray(image.pixel(i + 1, j));
+                
+            if (j > 0)
+                leftComp = qGray(image.pixel(i, j)) - qGray(image.pixel(i, j - 1));
+                
+            if (j < n - 1)
+                rightComp = qGray(image.pixel(i, j)) - qGray(image.pixel(i , j + 1));
+                
             energy = abs(upComp + downComp + leftComp + rightComp);
-
+            
             if (energyFunction.format() != 3)
-            {
                 energyFunction.setPixel(i, j, qRgb(energy, energy, energy));
-            }
             else
             {
+                if (energy > 255)
+                    energy = 255;
+                    
+                if (energy < 0)
+                    energy = 0;
+                    
                 energyFunction.setPixel(i, j, energy);
             }
         }
-    }
+        
     //cout << "maxenergy = " << maxenergy / (m * n) << endl;
     energySet = true;
     return energyFunction;
@@ -164,74 +178,115 @@ QImage Retargeting::setEnergy()
 
 bool** Retargeting::setVertSeams(int widthDifference)
 {
-    vector< vector<int > > seamEnergies;
+    int m = image.width();
+    int n = image.height();
 
+    vector<pair<int, int> > highestEnergies;
 
-    cout << "vertical seam values" << endl;
-
-    for (int i = 0; i < image.width(); i++)
+    for (int i = 0; i < m; i++)
     {
-        cout << vertSeams[image.height() - 1][i] << " ";
+        int energy = vertSeams[i][n - 1];
+
+        //cout << "pushing " << energy << ", " << i << " onto stack" << endl;
+
+        //push (energy, index)
+        highestEnergies.push_back(pair<int, int> (energy, i));
     }
 
-    return vertPixelsRemoved;
+    // using function as comparator
+    sort(highestEnergies.begin(), highestEnergies.end());
+    highestEnergies.erase(highestEnergies.begin() + widthDifference, highestEnergies.end());
+
+    // print out content:
+    cout << "highestEnergies contains:" << endl;
+    for (size_t x = 0; x < highestEnergies.size(); ++x)
+        cout << highestEnergies[x].first << ", " << highestEnergies[x].second << endl;
+
+    cout << endl;
 }
 
 bool** Retargeting::setLatSeams(int heightDifference)
 {
-    cout << endl << "lateral seam values" << endl;
-
-    for (int i = 0; i < image.height(); i++)
-    {
-        cout << latSeams[i][image.width() - 1] << " ";
-    }
-    cout << endl;
-    return latPixelsRemoved;
 }
-/**/
 
-void Retargeting::getVerticalSeamTable()
+void Retargeting::setVerticalSeamTable()
 {
+    if (!isImageSet())
+    {
+        cout << "there's no image to retarget" << endl;
+        return;
+    }
+    setEnergy();
+    
     int m = image.width();
     int n = image.height();
-
+    
     // Allocate memory
     vertSeams = new int*[m];
-
+    
     for (int i = 0; i < m; ++i)
     {
         //cout << i << " ";
         vertSeams[i] = new int[n];
-
+        
         for (int j = 0; j < n; j++)
         {
             vertSeams[i][j] = 0;
         }
     }
-
+    
     ofstream outFile;
     char outputFilename[] = "C:\\Users\\Andrew\\Documents\\vertseams.txt";
-
+    
     outFile.open(outputFilename, ios::out);
-
-    if (!outFile) {
-      cerr << "Can't open output file " << outputFilename << endl;
-      exit(1);
-    }
-
-    for (int j = 1; j < n; j++)
+    
+    if (!outFile)
     {
-        for (int i = 1; i < m - 1; i++)
+        cerr << "Can't open output file " << outputFilename << endl;
+        exit(1);
+    }
+    
+    //for (int j = 1; j < n - 1; j++)
+    for (int j = 0; j < n; j++)
+    {
+        //for (int i = 2; i < m - 2; i++)
+        
+        for (int i = 0; i < m; i++)
         {
-            int upRight = vertSeams[i + 1][j - 1];
-            int up = vertSeams[i][j - 1];
-            int upLeft = vertSeams[i - 1][j - 1];
-
-
+            int upRight = 0;
+            int up = 0;
+            int upLeft = 0;
+            
+            if (j > 0)
+            {
+                up = vertSeams[i][j - 1];
+                
+                if (i < m - 1)
+                    upRight = vertSeams[i + 1][j - 1];
+                    
+                if (i > 0)
+                    upLeft = vertSeams[i - 1][j - 1];
+            }
+            
             int pixelEnergy = qGray(energyFunction.pixel(i, j));
-            int seamEnergy = pixelEnergy + min(upLeft, min(up, upRight));
+            int seamEnergy = 0;
+            
+            //if not on the left edge
+            if (i > 0)
+            {
+                //and not on the right edge
+                if (i < m - 1)
+                    seamEnergy = pixelEnergy + min(upLeft, min(up, upRight));
+                //because on the right edge
+                else
+                    seamEnergy = pixelEnergy + min(up, upLeft);
+            }
+            //on the left edge
+            else
+                seamEnergy = pixelEnergy + min(up, upRight);
+                
             vertSeams[i][j] = seamEnergy;
-
+            
             outFile << seamEnergy << "(" << pixelEnergy << ")" << " ";
             //cout << seamEnergy << "(" << pixelEnergy << ")" << " ";
         }
@@ -240,28 +295,8 @@ void Retargeting::getVerticalSeamTable()
     }
 }
 
-void Retargeting::getLateralSeamTable()
+void Retargeting::setLateralSeamTable()
 {
-    int m = image.width();
-    int n = image.height();
-
-    // Allocate memory
-    latSeams = new int*[n];
-
-    for (int i = 0; i < n; ++i)
-        latSeams[i] = new int[m];
-
-    for (int j = 1; j < n; j++)
-    {
-        for (int i = 1; i < m - 1; i++)
-        {
-            int rightUp = latSeams[i - 1][j - 1];
-            int right = latSeams[i - 1][j];
-            int rightDown = latSeams[i - 1][j + 1];
-
-            latSeams[i][j] = qGray(energyFunction.pixel(i, j)) + min(rightUp, min(right, rightDown));
-        }
-    }
 }
 
 bool Retargeting::isEnergySet()

@@ -178,10 +178,6 @@ void RetargetWindow::on_retargetButton_clicked()
         widget.statusbar->showMessage("Go to File > New and select an image");
         return;
     }
-    if (!retarget.isEnergySet())
-    {
-        retarget.setEnergy();
-    }
 
     bool viewTooShort = false;
     bool viewTooSkinny = false;
@@ -193,7 +189,7 @@ void RetargetWindow::on_retargetButton_clicked()
     {
         viewTooSkinny = true;
         cout << "making vert seam matrix" << endl;
-        retarget.getVerticalSeamTable();
+        retarget.setVerticalSeamTable();
     }
     /*
     if (widget.graphicsView->height() < retarget.getImage().height())
@@ -206,31 +202,24 @@ void RetargetWindow::on_retargetButton_clicked()
 
     //status bar info
     if (!viewTooShort && !viewTooSkinny)
-    {
         widget.statusbar->showMessage("The view isn't small enough to retarget the image");
-    }
     else
     {
         stringstream ss;
         ss << "Retargeting " << retarget.getImage().width() << ", " << retarget.getImage().height() << " image to ";
 
         if (viewTooSkinny)
-        {
             ss << widget.graphicsView->width();
-        }
         else
-        {
             ss << retarget.getImage().width();
-        }
+
         ss << ", ";
+
         if (viewTooShort)
-        {
             ss << widget.graphicsView->height();
-        }
         else
-        {
             ss << retarget.getImage().height();
-        }
+
         widget.statusbar->showMessage(QString::fromStdString(ss.str()));
     }
 
@@ -258,27 +247,19 @@ void RetargetWindow::on_actionNew_triggered()
     widget.statusbar->showMessage(filename);
 
     if (!isMatch)
-    {
         widget.statusbar->showMessage("this type of file isn't supported");
-    }
     else
     {
         if (retarget.setImagePath(filename.toStdString()))
-        {
             widget.statusbar->showMessage("imagepath set to " + filename);
-        }
         else
-        {
             widget.statusbar->showMessage("imagepath set failure");
-        }
+
         if (retarget.setImage(filename.toStdString()))
-        {
             widget.statusbar->showMessage("image set to " + filename);
-        }
         else
-        {
             widget.statusbar->showMessage("imagepath set failure");
-        }
+
         showImage(retarget.getImage());
     }
 }
