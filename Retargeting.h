@@ -19,15 +19,13 @@ class Retargeting
         virtual ~Retargeting();
         std::string getImagePath();
         bool setImage(std::string path);
+        void setEnergy(QImage);
         QImage getImage();
-        QImage setEnergy();
         QImage getEnergy();
         bool isEnergySet();
         bool isImageSet();
-        void setEnergy(QImage);
         QImage energyFunction(QImage );
 
-        //return pixel masks
         void carveVertSeams(int );
         void carveLatSeams(int );
     private:

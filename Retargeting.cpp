@@ -115,7 +115,7 @@ QImage Retargeting::energyFunction(QImage image)
     int rightComp = 0;
     
     int energyVal;
-
+    
     for (int i = 0; i < m ; i++)
         for (int j = 0; j < n; j++)
         {
@@ -144,7 +144,7 @@ QImage Retargeting::energyFunction(QImage image)
             else
                 energy.setPixel(i, j, energyVal);
         }
-
+        
     return energy;
 }
 
@@ -160,234 +160,208 @@ void Retargeting::carveVertSeams(int widthDifference)
     int m = image.width();
     int n = image.height();
 
+    QImage newImage = image.copy(0, 0, m, n);
+    QImage oldImage;
+
+    QImage newEnergy = image.copy(0, 0, m, n);
+    QImage oldEnergy;
+    
     //return cumulative energy matrices
     int** vertSeams;
-
+    
     //return cumulative energy matrices
     int** vertCarvingDirections;
-
+    
     //pixel masks
     bool** vertPixelsRemoved;
-
-    int** imageMatrix;
-    int** energyMatrix;
-
-    for(int s = 0; s < widthDifference; s++)
+    
+    vertSeams = new int*[m];
+    
+    for (int i = 0; i < m; ++i)
     {
-        imageMatrix = new int*[m];
-
-        for (int i = 0; i < m; ++i)
-        {
-            imageMatrix[i] = new int[n];
-
-            for (int j = 0; j < n; j++){
-                if(s == 0)
-                imageMatrix[i][j] = image.pixel(i, j);
-                else{
-                    imageMatrix[i][j] = image.pixel(i, j);
-
-                }
-            }
-        }
-
-        energyMatrix = new int*[m];
-
-        for (int i = 0; i < m; ++i)
-        {
-            energyMatrix[i] = new int[n];
-
-            for (int j = 0; j < n; j++)
-                energyMatrix[i][j] = energy.pixel(i, j);
-        }
-
-        vertSeams = new int*[m];
-
-        for (int i = 0; i < m; ++i)
-        {
-            vertSeams[i] = new int[n];
-
-            for (int j = 0; j < n; j++)
-                vertSeams[i][j] = 0;
-        }
-
-        vertCarvingDirections = new int*[m];
-
-        for (int i = 0; i < m; ++i)
-        {
-            vertCarvingDirections[i] = new int[n];
-
-            for (int j = 0; j < n; j++)
-                vertCarvingDirections[i][j] = UP;
-        }
-
-        ofstream outFile;
-        char outputFilename[] = "C:\\Users\\Andrew\\Documents\\vertseams.txt";
-
-        outFile.open(outputFilename, ios::out);
-
-        if (!outFile)
-        {
-            cerr << "Can't open output file " << outputFilename << endl;
-            exit(1);
-        }
-
-        ofstream outFile2;
-        char outputFilename2[] = "C:\\Users\\Andrew\\Documents\\vertseamdirections.txt";
-
-        outFile2.open(outputFilename2, ios::out);
-
-        if (!outFile2)
-        {
-            cerr << "Can't open output file " << outputFilename2 << endl;
-            exit(1);
-        }
-
+        vertSeams[i] = new int[n];
+        
         for (int j = 0; j < n; j++)
-        {
-            for (int i = 0; i < m; i++)
-            {
-                int upRight = 0;
-                int up = 0;
-                int upLeft = 0;
-
-                if (j > 0)
-                {
-                    up = vertSeams[i][j - 1];
-
-                    if (i < m - 1)
-                        upRight = vertSeams[i + 1][j - 1];
-
-                    if (i > 0)
-                        upLeft = vertSeams[i - 1][j - 1];
-                }
-
-                int pixelEnergy = qGray(energy.pixel(i, j));
-                int seamEnergy = 0;
-                int direction = UP;
-
-                //inner case
-                if (i > 0 && i < m - 1)
-                {
-                    //and not on the right edge
-                    if (upRight < up)
-                        direction = UPRIGHT;
-
-                    if (upLeft < upRight && upLeft < up)
-                        direction = UPLEFT;
-
-                    seamEnergy = pixelEnergy + min(upLeft, min(up, upRight));
-                }
-
-                //right edge case
-                if (i >= m - 1)
-                {
-                    seamEnergy = pixelEnergy + min(up, upLeft);
-
-                    if (upLeft < up)
-                        direction = UPLEFT;
-                }
-
-                //left edge case
-                if (i == 0)
-                {
-                    seamEnergy = pixelEnergy + min(up, upRight);
-
-                    if (upRight < up)
-                        direction = UPRIGHT;
-                }
-
-                //error
-                if (i < 0 || i >= m)
-                    exit(1);
-
-                vertSeams[i][j] = seamEnergy;
-                vertCarvingDirections[i][j] = direction;
-
-                outFile << seamEnergy << "(" << pixelEnergy << ")" << " ";
-                outFile2 << direction << " ";
-            }
-            outFile << endl;
-            outFile2 << endl;
-        }
-        outFile.close();
-        outFile2.close();
-
-        vector<pair<int, int> > lowestEnergies;
-
+            vertSeams[i][j] = 0;
+    }
+    
+    vertCarvingDirections = new int*[m];
+    
+    for (int i = 0; i < m; ++i)
+    {
+        vertCarvingDirections[i] = new int[n];
+        
+        for (int j = 0; j < n; j++)
+            vertCarvingDirections[i][j] = UP;
+    }
+    
+    ofstream outFile;
+    char outputFilename[] = "C:\\Users\\Andrew\\Documents\\vertseams.txt";
+    
+    outFile.open(outputFilename, ios::out);
+    
+    if (!outFile)
+    {
+        cerr << "Can't open output file " << outputFilename << endl;
+        exit(1);
+    }
+    
+    ofstream outFile2;
+    char outputFilename2[] = "C:\\Users\\Andrew\\Documents\\vertseamdirections.txt";
+    
+    outFile2.open(outputFilename2, ios::out);
+    
+    if (!outFile2)
+    {
+        cerr << "Can't open output file " << outputFilename2 << endl;
+        exit(1);
+    }
+    
+    for (int j = 0; j < n; j++)
+    {
         for (int i = 0; i < m; i++)
         {
-            int energy = vertSeams[i][n - 1];
-
-            //push (energy, index)
-            lowestEnergies.push_back(pair<int, int> (energy, i));
+            int upRight = 0;
+            int up = 0;
+            int upLeft = 0;
+            
+            if (j > 0)
+            {
+                up = vertSeams[i][j - 1];
+                
+                if (i < m - 1)
+                    upRight = vertSeams[i + 1][j - 1];
+                    
+                if (i > 0)
+                    upLeft = vertSeams[i - 1][j - 1];
+            }
+            
+            int pixelEnergy = qGray(energy.pixel(i, j));
+            int seamEnergy = 0;
+            int direction = UP;
+            
+            //inner case
+            if (i > 0 && i < m - 1)
+            {
+                //and not on the right edge
+                if (upRight < up)
+                    direction = UPRIGHT;
+                    
+                if (upLeft < upRight && upLeft < up)
+                    direction = UPLEFT;
+                    
+                seamEnergy = pixelEnergy + min(upLeft, min(up, upRight));
+            }
+            
+            //right edge case
+            if (i >= m - 1)
+            {
+                seamEnergy = pixelEnergy + min(up, upLeft);
+                
+                if (upLeft < up)
+                    direction = UPLEFT;
+            }
+            
+            //left edge case
+            if (i == 0)
+            {
+                seamEnergy = pixelEnergy + min(up, upRight);
+                
+                if (upRight < up)
+                    direction = UPRIGHT;
+            }
+            
+            //error
+            if (i < 0 || i >= m)
+                exit(1);
+                
+            vertSeams[i][j] = seamEnergy;
+            vertCarvingDirections[i][j] = direction;
+            
+            outFile << seamEnergy << "(" << pixelEnergy << ")" << " ";
+            outFile2 << direction << " ";
         }
-
-        // using function as comparator
-        sort(lowestEnergies.begin(), lowestEnergies.end());
-        lowestEnergies.erase(lowestEnergies.begin() + widthDifference, lowestEnergies.end());
-
-        ofstream outFile3;
-        char outputFilename3[] = "C:\\Users\\Andrew\\Documents\\lowestEnergies.txt";
-        outFile3.open(outputFilename3, ios::out);
-
-        if (!outFile3)
-        {
-            cerr << "Can't open output file " << outputFilename3 << endl;
-            exit(1);
-        }
-        // print out content:
-        for (size_t x = 0; x < lowestEnergies.size(); ++x)
-            outFile3 << lowestEnergies[x].first << ", " << lowestEnergies[x].second << endl;
-
-        outFile3.close();
-        /*
-        if(widthDifference == highestEnergies.size())
-            cout << "if the vector of highest energies is sorted correctly then the seams can be carved" << endl;
-        else
-            cout << "the vector of highest energies doesn't have a starting pixel for each seam" << endl;
-        */
-
-        // Allocate memory
-        vertPixelsRemoved = new bool*[m];
-
-        for (int i = 0; i < m; ++i)
-        {
-            //cout << i << " ";
-            vertPixelsRemoved[i] = new bool[n];
-
-            for (int j = 0; j < n; j++)
-                vertPixelsRemoved[i][j] = false;
-        }
-
-        int column = lowestEnergies[0].second;
-
-        //carve out one pixel per row
-        for (int j = n - 1; j >= 0; j--)
-        {
-            vertPixelsRemoved[column][j] = true;
-
-            //decide how to modify the column
-        }
-
-        ofstream outFile4;
-        char outputFilename4[] = "C:\\Users\\Andrew\\Documents\\vertPixelsRemoved.txt";
-        outFile4.open(outputFilename4, ios::out);
-
-        if (!outFile4)
-        {
-            cerr << "Can't open output file " << outputFilename4 << endl;
-            exit(1);
-        }
-
-        for (int j = 0; j < n; j++)
-        {
-            for (int i = 0; i < m; i++)
-                outFile4 << vertPixelsRemoved[i][j] << " ";
-
-            outFile4 << endl;
-        }
-        outFile4.close();
+        outFile << endl;
+        outFile2 << endl;
     }
+    outFile.close();
+    outFile2.close();
+    
+    vector<pair<int, int> > lowestEnergies;
+    
+    for (int i = 0; i < m; i++)
+    {
+        int energy = vertSeams[i][n - 1];
+        
+        //push (energy, index)
+        lowestEnergies.push_back(pair<int, int> (energy, i));
+    }
+    
+    // using function as comparator
+    sort(lowestEnergies.begin(), lowestEnergies.end());
+    lowestEnergies.erase(lowestEnergies.begin() + widthDifference, lowestEnergies.end());
+    
+    ofstream outFile3;
+    char outputFilename3[] = "C:\\Users\\Andrew\\Documents\\lowestEnergies.txt";
+    outFile3.open(outputFilename3, ios::out);
+    
+    if (!outFile3)
+    {
+        cerr << "Can't open output file " << outputFilename3 << endl;
+        exit(1);
+    }
+    // print out content:
+    for (size_t x = 0; x < lowestEnergies.size(); ++x)
+        outFile3 << lowestEnergies[x].first << ", " << lowestEnergies[x].second << endl;
+        
+    outFile3.close();
+    /*
+    if(widthDifference == highestEnergies.size())
+        cout << "if the vector of highest energies is sorted correctly then the seams can be carved" << endl;
+    else
+        cout << "the vector of highest energies doesn't have a starting pixel for each seam" << endl;
+    */
+    
+    // Allocate memory
+    vertPixelsRemoved = new bool*[m];
+    
+    for (int i = 0; i < m; ++i)
+    {
+        //cout << i << " ";
+        vertPixelsRemoved[i] = new bool[n];
+        
+        for (int j = 0; j < n; j++)
+            vertPixelsRemoved[i][j] = false;
+    }
+    
+    int column = lowestEnergies[0].second;
+    
+    //carve out one pixel per row
+    for (int j = n - 1; j >= 0; j--)
+    {
+        vertPixelsRemoved[column][j] = true;
+        
+        //decide how to modify the column
+    }
+    
+    ofstream outFile4;
+    char outputFilename4[] = "C:\\Users\\Andrew\\Documents\\vertPixelsRemoved.txt";
+    outFile4.open(outputFilename4, ios::out);
+    
+    if (!outFile4)
+    {
+        cerr << "Can't open output file " << outputFilename4 << endl;
+        exit(1);
+    }
+    
+    for (int j = 0; j < n; j++)
+    {
+        for (int i = 0; i < m; i++)
+            outFile4 << vertPixelsRemoved[i][j] << " ";
+            
+        outFile4 << endl;
+    }
+    outFile4.close();
 }
 
 void Retargeting::setVerticalSeamTable(int m, int n)
