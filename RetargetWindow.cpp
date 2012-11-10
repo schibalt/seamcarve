@@ -185,14 +185,20 @@ void RetargetWindow::on_retargetButton_clicked()
     cout << "view is " << widget.graphicsView->width() << ", " << widget.graphicsView->height();
     cout << " and image is " << retarget.getImage().width() << ", " << retarget.getImage().height() << endl;
 
-    if (widget.graphicsView->width() < retarget.getImage().width())
+    int widthDiff = widget.graphicsView->width() - retarget.getImage().width();
+
+    if (widthDiff < 0)
     {
         viewTooSkinny = true;
         cout << "making vert seam matrix" << endl;
         retarget.setVerticalSeamTable();
+        retarget.setVertSeams(abs(widthDiff));
     }
+
+    int heightDiff = widget.graphicsView->height() - retarget.getImage().height();
+
     /*
-    if (widget.graphicsView->height() < retarget.getImage().height())
+    if (heightDiff < 0)
     {
         viewTooShort = true;
         cout << "making lat seam matrix" << endl;

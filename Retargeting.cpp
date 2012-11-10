@@ -126,15 +126,6 @@ QImage Retargeting::setEnergy()
     int leftComp = 0;
     int rightComp = 0;
     
-    /*
-    QRgb px;
-    int uppx;
-    int downpx;
-    int leftpx;
-    int rightpx;
-    int maxenergy;
-    */
-    
     int energy;
     
     /*for (int i = 1; i < m - 1; i++)
@@ -180,33 +171,130 @@ bool** Retargeting::setVertSeams(int widthDifference)
 {
     int m = image.width();
     int n = image.height();
-
-    vector<pair<int, int> > highestEnergies;
-
+    
+    vector<pair<int, int> > lowestEnergies;
+    
     for (int i = 0; i < m; i++)
     {
         int energy = vertSeams[i][n - 1];
-
+        
         //cout << "pushing " << energy << ", " << i << " onto stack" << endl;
-
+        
         //push (energy, index)
-        highestEnergies.push_back(pair<int, int> (energy, i));
+        lowestEnergies.push_back(pair<int, int> (energy, i));
     }
-
-    // using function as comparator
-    sort(highestEnergies.begin(), highestEnergies.end());
-    highestEnergies.erase(highestEnergies.begin() + widthDifference, highestEnergies.end());
-
-    // print out content:
-    cout << "highestEnergies contains:" << endl;
+    
+    /*
     for (size_t x = 0; x < highestEnergies.size(); ++x)
         cout << highestEnergies[x].first << ", " << highestEnergies[x].second << endl;
-
+    
     cout << endl;
+    */
+    
+    // using function as comparator
+    sort(lowestEnergies.begin(), lowestEnergies.end());
+    lowestEnergies.erase(lowestEnergies.begin() + widthDifference, lowestEnergies.end());
+    
+    ofstream outFile;
+    char outputFilename[] = "C:\\Users\\Andrew\\Documents\\lowestEnergies.txt";
+    outFile.open(outputFilename, ios::out);
+    
+    if (!outFile)
+    {
+        cerr << "Can't open output file " << outputFilename << endl;
+        exit(1);
+    }
+    // print out content:
+    //cout << "lowestEnergies contains:" << endl;
+    for (size_t x = 0; x < lowestEnergies.size(); ++x)
+        //cout << lowestEnergies[x].first << ", " << lowestEnergies[x].second << endl;
+        outFile << lowestEnergies[x].first << ", " << lowestEnergies[x].second << endl;
+        
+    outFile.close();
+    /*
+    if(widthDifference == highestEnergies.size())
+        cout << "if the vector of highest energies is sorted correctly then the seams can be carved" << endl;
+    else
+        cout << "the vector of highest energies doesn't have a starting pixel for each seam" << endl;
+    */
+    
+    // Allocate memory
+    vertPixelsRemoved = new bool*[m];
+    
+    for (int i = 0; i < m; ++i)
+    {
+        //cout << i << " ";
+        vertPixelsRemoved[i] = new bool[n];
+        
+        for (int j = 0; j < n; j++)
+            vertPixelsRemoved[i][j] = false;
+    }
+    
+    //for each seam
+    for (size_t x = 0; x < lowestEnergies.size(); ++x)
+    {
+        int column = lowestEnergies[x].second;
+        
+        //carve out one pixel per row
+        for (int j = n - 1; j >= 0; j--)
+        {
+            vertPixelsRemoved[column][j] = true;
+            
+            //note the seam energies of the upper pixels
+            if (j > 0)
+            {
+                int upLeft = 0;
+                //int up = 0;
+                int upRight = 0;
+                int currentSeamEnergy = lowestEnergies[x].first;
+                int currentpixelEnergy = qGray(energyFunction.pixel(column, j));
+                
+                //up = vertSeams[column][j - 1];
+                //if (up == currentSeamEnergy - currentpixelEnergy && !vertPixelsRemoved[column][j - 1])
+                //i'm in trouble
+                
+                if (column > 0)
+                {
+                    upLeft = vertSeams[column - 1][j - 1];
+                    if (upLeft == currentSeamEnergy - currentpixelEnergy && !vertPixelsRemoved[column - 1][j - 1])
+                        //carve diagonally upward-leftward
+                        column--;
+                }
+                if (column < m - 1)
+                {
+                    upRight = vertSeams[column + 1][j - 1];
+                    if (upRight == currentSeamEnergy - currentpixelEnergy && !vertPixelsRemoved[column + 1][j - 1])
+                        //carve diagonally upward-rightward
+                        column++;
+                }
+            }
+        }
+    }
+    
+    char outputFilename2[] = "C:\\Users\\Andrew\\Documents\\vertPixelsRemoved.txt";
+    
+    outFile.open(outputFilename2, ios::out);
+    
+    if (!outFile)
+    {
+        cerr << "Can't open output file " << outputFilename2 << endl;
+        exit(1);
+    }
+    
+    for (int j = 0; j < n; j++)
+    {
+        for (int i = 0; i < m; i++)
+            outFile << vertPixelsRemoved[i][j] << " ";
+            
+        outFile << endl;
+    }
+    outFile.close();
+    return vertPixelsRemoved;
 }
 
 bool** Retargeting::setLatSeams(int heightDifference)
 {
+    return latPixelsRemoved;
 }
 
 void Retargeting::setVerticalSeamTable()
@@ -293,6 +381,7 @@ void Retargeting::setVerticalSeamTable()
         outFile << endl;
         //cout << endl;
     }
+    outFile.close();
 }
 
 void Retargeting::setLateralSeamTable()
