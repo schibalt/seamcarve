@@ -150,30 +150,43 @@ void RetargetWindow::on_retargetButton_clicked()
 
     int widthDiff = widget.graphicsView->width() - retarget.getImage().width();
 
-    QImage retargetedImage;
-    bool retargetSuccess;
-
     if (widthDiff < 0)
-    {
         viewTooSkinny = true;
-        cout << "making vert seam matrix" << endl;
-        retargetSuccess = retarget.carveVertSeams(abs(widthDiff));
-    }
 
-    if(retargetSuccess)
-        retargetedImage = retarget.getRetargetedImage();
-
-    /*
     int heightDiff = widget.graphicsView->height() - retarget.getImage().height();
 
     if (heightDiff < 0)
-    {
         viewTooShort = true;
-        cout << "making lat seam matrix" << endl;
-        retarget.setLateralSeamTable();
-        retarget.setLatSeams(abs(heightDiff));
+
+    QImage retargetedImage;
+    bool retargetSuccess = false;
+    int offset = 2;
+
+    //status bar info
+    if ( !viewTooSkinny)
+        widget.statusbar->showMessage("The view isn't skinny enough to retarget the image");
+    else
+    {
+        stringstream ss;
+        ss << "Retargeting " << retarget.getImage().width() << ", " << retarget.getImage().height() << " image to ";
+
+        if (viewTooSkinny)
+            ss << widget.graphicsView->width();
+        else
+            ss << retarget.getImage().width();
+
+        ss << ", ";
+
+        if (viewTooShort)
+            ss << widget.graphicsView->height();
+        else
+            ss << retarget.getImage().height();
+
+        widget.statusbar->showMessage(QString::fromStdString(ss.str()));
+
+        if (viewTooSkinny)
+            retargetSuccess = retarget.carveVertSeams(abs(widthDiff) + offset);
     }
-    */
 
     // the items (lines and points) in the graphicsview
     QList<QGraphicsItem*> list = (*scene).items();
@@ -193,9 +206,14 @@ void RetargetWindow::on_retargetButton_clicked()
     (*scene).addItem(Qgpmi);
     widget.graphicsView->setSceneRect(QRect(0, 0, retargetedImage.width(), retargetedImage.height()));
 
+     heightDiff = widget.graphicsView->height() - retarget.getImage().height();
+
+    if (heightDiff < 0)
+        viewTooShort = true;
+
     //status bar info
-    if (!viewTooShort && !viewTooSkinny)
-        widget.statusbar->showMessage("The view isn't small enough to retarget the image");
+    if ( !viewTooShort)
+        widget.statusbar->showMessage("The view isn't short enough to retarget the image");
     else
     {
         stringstream ss;
@@ -214,7 +232,33 @@ void RetargetWindow::on_retargetButton_clicked()
             ss << retarget.getImage().height();
 
         widget.statusbar->showMessage(QString::fromStdString(ss.str()));
+
+        if (viewTooShort)
+            retargetSuccess = retarget.carveLatSeams(abs(heightDiff) + offset);
     }
+
+    if (retargetSuccess)
+        retargetedImage = retarget.getRetargetedImage();
+    else
+        return;
+
+    // the items (lines and points) in the graphicsview
+     list = (*scene).items();
+
+    // delete everything.  this is a new case.
+     it = list.begin();
+    for (; it != list.end(); ++it)
+    {
+        if (*it)
+        {
+            (*scene).removeItem(*it);
+            delete *it;
+        }
+    }
+
+     Qgpmi = new QGraphicsPixmapItem(QPixmap::fromImage(retargetedImage));
+    (*scene).addItem(Qgpmi);
+    widget.graphicsView->setSceneRect(QRect(0, 0, retargetedImage.width(), retargetedImage.height()));
 }
 
 void RetargetWindow::on_actionNew_triggered()

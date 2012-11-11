@@ -30,6 +30,7 @@ Retargeting::~Retargeting()
 
 bool Retargeting::setImage(string path)
 {
+    retargetSuccess = false;
     imagePath = path;
     QString QsPath;
     cout << "trying to set " << path << " as image for retarget" << endl;
@@ -117,11 +118,24 @@ bool Retargeting::carveVertSeams(int widthDifference)
     int m = image.width();
     int n = image.height();
 
-    QImage newImage = image.copy(0, 0, m, n);
+    QImage newImage;
     QImage oldImage;
 
-    QImage newEnergy = energy.copy(0, 0, m, n);
+    QImage newEnergy;
     QImage oldEnergy;
+
+    if (imagePath == lastRetargetPath && retargetSuccess)
+    {
+        newImage = retargetedImage;
+        newEnergy = energyFunction(retargetedImage);
+    }
+    else
+    {
+        newImage = image.copy(0, 0, m, n);
+        newEnergy = energy.copy(0, 0, m, n);
+    }
+
+    lastRetargetPath = imagePath;
     
     //for storing cumulative energy matrices
     int** vertSeams;
@@ -252,7 +266,7 @@ bool Retargeting::carveVertSeams(int widthDifference)
 
                 //for the last row keep track of the lowest energy cell.  this is the first
                 //pixel for the seam that will be carved from the image bottom-up
-                if (j == n - 1 && seamEnergy < minEnergy)
+                if (j == n - 1 && seamEnergy <= minEnergy)
                 {
                     minEnergyCell = i;
                     minEnergy = seamEnergy;
@@ -300,7 +314,7 @@ bool Retargeting::carveVertSeams(int widthDifference)
             if (vertCarvingDirections[column][j - 1] == UPRIGHT)
                 column++;
         }
-        vertPixelsRemoved[column][0] = true;
+        //vertPixelsRemoved[column][0] = true;
 
         //init pixel mask file
         ofstream vertPixelsRemovedFile;
@@ -379,7 +393,9 @@ bool Retargeting::carveVertSeams(int widthDifference)
                             pixelValue = 0;
                     }
                     vertPixelsSetFilestream << pixelValue << " ";
-                    newImage.setPixel(i - 1, j, pixelValue);
+
+                    if (i < m - 1)
+                        newImage.setPixel(i - 1, j, pixelValue);
                 }
                 else
                 {
@@ -397,7 +413,9 @@ bool Retargeting::carveVertSeams(int widthDifference)
                     }
 
                     vertPixelsSetFilestream << pixelValue << " ";
-                    newImage.setPixel(i, j, pixelValue);
+
+                    if (i < m - 1)
+                        newImage.setPixel(i, j, pixelValue);
                     //localEnergy.setPixel(i, j, energyVal);}
                     //localEnergy.setPixel(i, j, qRgb(energyVal, energyVal, energyVal));
                 }
@@ -426,16 +444,327 @@ bool Retargeting::isRetargetSuccessful()
     return retargetSuccess;
 }
 
-void Retargeting::setVerticalSeamTable(int m, int n)
+bool Retargeting::carveLatSeams(int heightDifference)
 {
-}
+    if (!isImageSet())
+    {
+        cout << "there's no image to retarget" << endl;
+        return false;
+    }
+    setEnergy(energyFunction(image));
 
-void Retargeting::carveLatSeams(int heightDifference)
-{
-}
+    int m = image.width();
+    int n = image.height();
 
-void Retargeting::setLateralSeamTable(int m, int n)
-{
+    //if(retargetSuccess && image.l)
+
+    QImage newImage;
+    QImage oldImage;
+
+    QImage newEnergy;
+    QImage oldEnergy;
+
+    if (imagePath == lastRetargetPath && retargetSuccess)
+    {
+        newImage = retargetedImage;
+        newEnergy = energyFunction(retargetedImage);
+    }
+    else
+    {
+        newImage = image.copy(0, 0, m, n);
+        newEnergy = energy.copy(0, 0, m, n);
+    }
+
+    lastRetargetPath = imagePath;
+
+    //for storing cumulative energy matrices
+    int** latSeams;
+
+    //for storing lookup matrices
+    int** latCarvingDirections;
+
+    //for storing pixel masks
+    bool** latPixelsRemoved;
+
+    for (int s = 0; s < heightDifference; s++)
+    {
+        int format = image.format();
+
+        latSeams = new int*[m];
+
+        for (int i = 0; i < m; ++i)
+        {
+            latSeams[i] = new int[n];
+
+            for (int j = 0; j < n; j++)
+                latSeams[i][j] = 0;
+        }
+
+        latCarvingDirections = new int*[m];
+
+        for (int i = 0; i < m; ++i)
+        {
+            latCarvingDirections[i] = new int[n];
+
+            for (int j = 0; j < n; j++)
+                latCarvingDirections[i][j] = LEFT;
+        }
+
+        ofstream latSeamsFile;
+        char latSeamsFilename[] = "C:\\Users\\Andrew\\Documents\\latseams.txt";
+
+        latSeamsFile.open(latSeamsFilename, ios::out);
+
+        if (!latSeamsFile)
+        {
+            cerr << "Can't open output file " << latSeamsFilename << endl;
+            exit(EXIT_FAILURE);
+        }
+
+        ofstream latSeamDirectionsFilestream;
+        char vertSeamDirectionsFilename[] = "C:\\Users\\Andrew\\Documents\\latseamdirections.txt";
+
+        latSeamDirectionsFilestream.open(vertSeamDirectionsFilename, ios::out);
+
+        if (!latSeamDirectionsFilestream)
+        {
+            cerr << "Can't open output file " << vertSeamDirectionsFilename << endl;
+            exit(EXIT_FAILURE);
+        }
+
+        int minEnergyCell;
+        int minEnergy = 2147483647;
+
+        int leftDown = -1;
+        int left = -1;
+        int leftUp = -1;
+
+        int pixelEnergy = -1;
+        int seamEnergy = -1;
+        int direction = LEFT;
+
+        //build the dynamic seam energy table and the lookup table in a big Oh(n * m) operation
+        for (int i = 0; i < m; i++)
+        {
+            minEnergy = 2147483647;
+
+            for (int j = 0; j < n; j++)
+            {
+                pixelEnergy = qGray(newEnergy.pixel(i, j));
+
+                if (i == 0)
+                {
+                    latSeams[i][j] = pixelEnergy;
+                    continue;
+                }
+
+                left = latSeams[i - 1][j];
+                direction = LEFT;
+
+                //top edge case
+                if (j == 0)
+                {
+                    leftDown = latSeams[i - 1][j + 1];
+                    seamEnergy = pixelEnergy + min(left, leftDown);
+
+                    if (leftDown < left)
+                        direction = LEFTDOWN;
+                }
+                else
+                {
+                    //bottom edge case
+                    if (j == n - 1)
+                    {
+                        leftUp = latSeams[i - 1][j - 1];
+                        seamEnergy = pixelEnergy + min(left, leftUp);
+
+                        if (leftUp < left)
+                            //the energy's lower inside the image rather than along the edge
+                            direction = LEFTUP;
+                    }
+                    else
+                    {
+                        leftUp = latSeams[i - 1][j - 1];
+                        leftDown = latSeams[i - 1][j + 1];
+
+                        if (leftDown < left)
+                            //upright's at most only the second highest
+                            direction = LEFTDOWN;
+
+                        //but still might be higher than upleft so the seam won't go in that direction
+                        if (leftUp < leftDown && leftUp < left)
+                            //uplefts the lowest
+                            direction = LEFTUP;
+
+                        seamEnergy = pixelEnergy + min(leftUp, min(left, leftDown));
+                    }
+                }
+
+                //error
+                if (j < 0 || j >= n)exit(EXIT_FAILURE);
+
+                //for the last row keep track of the lowest energy cell.  this is the first
+                //pixel for the seam that will be carved from the image bottom-up
+                if (i == m - 1 && seamEnergy <= minEnergy)
+                {
+                    minEnergyCell = j;
+                    minEnergy = seamEnergy;
+                }
+
+                latSeams[i][j] = seamEnergy;
+                latCarvingDirections[i][j] = direction;
+
+                latSeamsFile << seamEnergy << "(" << pixelEnergy << ")" << " ";
+                latSeamDirectionsFilestream << direction << " ";
+            }
+            latSeamsFile << endl;
+            latSeamDirectionsFilestream << endl;
+        }
+        latSeamsFile.close();
+        latSeamDirectionsFilestream.close();
+
+        //init the pixel mask
+        latPixelsRemoved = new bool*[m];
+
+        for (int i = 0; i < m; ++i)
+        {
+            //cout << i << " ";
+            latPixelsRemoved[i] = new bool[n];
+
+            for (int j = 0; j < n; j++)
+                //initially false; pixel isn't removed
+                latPixelsRemoved[i][j] = false;
+        }
+
+        //starting row for least energetic seam is paired with lowest energy value
+        int row = minEnergyCell;
+
+        //that pixel's removed beforehand
+        latPixelsRemoved[m - 1][row] = true;
+
+        //carve out one pixel per column starting from the right
+        for (int i = m - 1; i > 0; i--)
+        {
+            latPixelsRemoved[i][row] = true;
+
+            if (latCarvingDirections[i - 1][row] == LEFTUP)
+                row--;
+
+            if (latCarvingDirections[i - 1][row] == LEFTDOWN)
+                row++;
+        }
+
+        //init pixel mask file
+        ofstream latPixelsRemovedFile;
+        char latPixelsRemovedFilename[] = "C:\\Users\\Andrew\\Documents\\latPixelsRemoved.txt";
+        latPixelsRemovedFile.open(latPixelsRemovedFilename, ios::out);
+        latPixelsRemovedFile << "s:" << s << endl;
+
+        //pixel mask file can't be opened
+        if (!latPixelsRemovedFile)
+        {
+            cerr << "Can't open output file " << latPixelsRemovedFilename << endl;
+            exit(EXIT_FAILURE);
+        }
+
+        //init pixel mask file
+        ofstream latPixelsSetFilestream;
+        char vertPixelsSetFilename[] = "C:\\Users\\Andrew\\Documents\\latPixelsSet.txt";
+        latPixelsSetFilestream.open(vertPixelsSetFilename, ios::out);
+        latPixelsSetFilestream << "s:" << s << endl;
+
+        //pixel mask file can't be opened
+        if (!latPixelsSetFilestream)
+        {
+            cerr << "Can't open output file " << vertPixelsSetFilename << endl;
+            exit(EXIT_FAILURE);
+        }
+
+        //save the images before the seam's carved
+        oldImage = newImage.copy(0, 0, m, n);
+        oldEnergy = newEnergy.copy(0, 0, m, n);
+
+        //init the empty images so the pixels from the old images can be written into them
+        //(minus the seam that is being carved out per the pixel mask)
+        newImage = QImage(m, n - 1, oldImage.format());
+        newEnergy = QImage(m, n - 1, oldEnergy.format());
+
+        if (newImage.format() == 3)
+        {
+            newEnergy.setNumColors(oldImage.numColors());
+            newImage.setNumColors(oldImage.numColors());
+            newEnergy.setColorTable(oldImage.colorTable());
+            newImage.setColorTable(oldImage.colorTable());
+        }
+
+        for (int i = 0; i < m; i++)
+        {
+            bool seamFound = false;
+
+            for (int j = 0; j < n; j++)
+            {
+                latPixelsRemovedFile << latPixelsRemoved[i][j] << " ";
+
+                if (latPixelsRemoved[i][j])
+                {
+                    seamFound = true;
+                    continue;
+                }
+
+                //if the seam's already been carved out the pixels will have been
+                //shifted upward in the new image
+                if (seamFound)
+                {
+                    int pixelValue = oldImage.pixel(i, j);
+
+                    if (newImage.format() == 3)
+                    {
+                        pixelValue = qGray(pixelValue);
+
+                        if (pixelValue > 255)
+                            pixelValue = 255;
+
+                        if (pixelValue < 0)
+                            pixelValue = 0;
+                    }
+                    latPixelsSetFilestream << pixelValue << " ";
+
+                    if (j < n - 1)
+                        newImage.setPixel(i, j - 1, pixelValue);
+                }
+                else
+                {
+                    int pixelValue = oldImage.pixel(i, j);
+
+                    if (oldImage.format() == 3)
+                    {
+                        pixelValue = qGray(pixelValue);
+
+                        if (pixelValue > 255)
+                            pixelValue = 255;
+
+                        if (pixelValue < 0)
+                            pixelValue = 0;
+                    }
+
+                    latPixelsSetFilestream << pixelValue << " ";
+
+                    if (j < n - 1)
+                        newImage.setPixel(i, j, pixelValue);
+                }
+            } //row done
+
+            latPixelsRemovedFile << "i:" << i << endl;
+            latPixelsSetFilestream << "i:" << i << endl;
+        }//seam done
+        latPixelsRemovedFile.close();
+        latPixelsSetFilestream.close();
+        newEnergy = energyFunction(newImage);
+        n--;
+    }//all seams done
+    retargetedImage = newImage;
+    retargetSuccess = true;
+    return retargetSuccess;
 }
 
 bool Retargeting::isEnergySet()

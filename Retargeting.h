@@ -31,19 +31,16 @@ class Retargeting
         QImage energyFunction(QImage);
 
         bool carveVertSeams(int);
-        void carveLatSeams(int);
+        bool carveLatSeams(int);
     private:
         QImage image;
         QImage energy;
         QImage retargetedImage;
 
-        //set cumulative energy matrices
-        void setVerticalSeamTable(int m, int n);
-        void setLateralSeamTable(int m, int n);
-
         std::string imagePath;
+        std::string lastRetargetPath;
         struct sort_pred;
-        enum SeamDirections { UP, UPRIGHT, UPLEFT, LEFT, LEFTDOWN, LEFTLEFTUP};
+        enum SeamDirections { UP, UPRIGHT, UPLEFT, LEFT, LEFTDOWN, LEFTUP};
         bool energySet;
         bool imageSet;
         bool retargetSuccess;
