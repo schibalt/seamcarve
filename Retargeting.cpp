@@ -134,7 +134,6 @@ bool Retargeting::carveVertSeams(int widthDifference)
 
     for (int s = 0; s < widthDifference; s++)
     {
-        m -= s;
 
         vertSeams = new int*[m];
 
@@ -300,14 +299,15 @@ bool Retargeting::carveVertSeams(int widthDifference)
         //carve out one pixel per row starting from the bottom
         for (int j = n - 1; j > 0; j--)
         {
-            if (vertCarvingDirections[column][j] == UPLEFT)
+            vertPixelsRemoved[column][j] = true;
+
+            if (vertCarvingDirections[column][j - 1] == UPLEFT)
                 column--;
 
-            if (vertCarvingDirections[column][j] == UPRIGHT)
+            if (vertCarvingDirections[column][j - 1] == UPRIGHT)
                 column++;
-
-            vertPixelsRemoved[column][j - 1] = true;
         }
+        vertPixelsRemoved[column][0] = true;
 
         //init pixel mask file
         ofstream vertPixelsRemovedFile;
@@ -332,6 +332,9 @@ bool Retargeting::carveVertSeams(int widthDifference)
         }
         */
 
+        oldImage = QImage(m, n, newImage.format());
+        oldEnergy = QImage(m, n, newEnergy.format());
+
         //save the images before the seam's carved
         oldImage = newImage.copy(0, 0, m, n);
         oldEnergy = newEnergy.copy(0, 0, m, n);
@@ -347,6 +350,8 @@ bool Retargeting::carveVertSeams(int widthDifference)
 
             for (int i = 0; i < m; i++)
             {
+                vertPixelsRemovedFile << vertPixelsRemoved[i][j] << " ";
+
                 if (vertPixelsRemoved[i][j])
                 {
                     seamFound = true;
@@ -359,13 +364,12 @@ bool Retargeting::carveVertSeams(int widthDifference)
                     newImage.setPixel(i - 1, j, oldImage.pixel(i, j));
                 else
                     newImage.setPixel(i, j, oldImage.pixel(i, j));
-
-                vertPixelsRemovedFile << vertPixelsRemoved[i][j] << " ";
             }
             vertPixelsRemovedFile << endl;
         }
         vertPixelsRemovedFile.close();
         newEnergy = energyFunction(newImage);
+        m--;
     }
     retargetedImage = newImage;
     retargetSuccess = true;
