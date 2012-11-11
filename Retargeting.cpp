@@ -178,8 +178,8 @@ bool Retargeting::carveVertSeams(int widthDifference)
             exit(EXIT_FAILURE);
         }
 
-        int minEnergyCell = -1;
-        int minEnergy = -1;
+        int minEnergyCell;
+        int minEnergy = 2147483647;
 
         int upRight = -1;
         int up = -1;
@@ -192,6 +192,8 @@ bool Retargeting::carveVertSeams(int widthDifference)
         //build the dynamic seam energy table and the lookup table in a big Oh(n * m) operation
         for (int j = 0; j < n; j++)
         {
+            minEnergy = 2147483647;
+
             for (int i = 0; i < m; i++)
             {
                 pixelEnergy = qGray(newEnergy.pixel(i, j));
@@ -247,13 +249,6 @@ bool Retargeting::carveVertSeams(int widthDifference)
                 //error
                 if (i < 0 || i >= m)
                     exit(1);
-
-                //set minenergy for the first time
-                if (minEnergy < 0)
-                {
-                    minEnergy = seamEnergy;
-                    minEnergyCell = i;
-                }
 
                 //for the last row keep track of the lowest energy cell.  this is the first
                 //pixel for the seam that will be carved from the image bottom-up
