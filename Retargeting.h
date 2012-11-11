@@ -7,7 +7,7 @@
 
 #ifndef RETARGETING_H
 #define RETARGETING_H
-#include <string>
+//#include <string>
 #include <QGraphicsPixmapItem>
 using namespace std;
 
@@ -22,12 +22,16 @@ class Retargeting
         void setEnergy(QImage);
         QImage getImage();
         QImage getEnergy();
+        QImage getRetargetedImage();
+
         bool isEnergySet();
         bool isImageSet();
-        QImage energyFunction(QImage );
+        bool isRetargetSuccessful();
 
-        void carveVertSeams(int );
-        void carveLatSeams(int );
+        QImage energyFunction(QImage);
+
+        bool carveVertSeams(int);
+        void carveLatSeams(int);
     private:
         QImage image;
         QImage energy;
@@ -38,10 +42,11 @@ class Retargeting
         void setLateralSeamTable(int m, int n);
 
         std::string imagePath;
-        struct sort_pred;        
+        struct sort_pred;
         enum SeamDirections { UP, UPRIGHT, UPLEFT, LEFT, LEFTDOWN, LEFTLEFTUP};
         bool energySet;
         bool imageSet;
+        bool retargetSuccess;
 };
 
 #endif  /* RETARGETING_H */

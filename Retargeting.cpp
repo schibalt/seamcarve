@@ -26,49 +26,6 @@ Retargeting::Retargeting(const Retargeting& orig)
 
 Retargeting::~Retargeting()
 {
-    /*
-    //delete &imagePath;
-    cout << "imagepath deleted" << endl;
-    //delete &energyFunction;
-    cout << "energyFunction deleted" << endl;
-    
-    // De-Allocate memory to prevent memory leak
-    for (int i = 0; i < image.width(); ++i)
-        delete [] vertSeams[i];
-    
-    cout << "vertSeams 2nd dim arrays deleted" << endl;
-    delete [] vertSeams;
-    cout << "vertSeams deleted" << endl;
-    
-    // De-Allocate memory to prevent memory leak
-    //for (int i = 0; i < image.height(); ++i)
-    //delete [] latSeams[i];
-    
-    cout << "latSeams 2nd dim arrays deleted" << endl;
-    //delete [] latSeams;
-    cout << "latSeams deleted" << endl;
-    
-    //delete &image;
-    cout << "image deleted" << endl;
-    //delete &energySet;
-    cout << "energySet deleted" << endl;
-    //delete &imageSet;
-    cout << "imageSet deleted" << endl;
-    */
-    
-    /*
-    // De-Allocate memory to prevent memory leak
-    for (int i = 0; i < image.width(); ++i)
-        delete [] vertPixelsRemoved[i];
-    
-    delete [] vertPixelsRemoved;
-    
-    // De-Allocate memory to prevent memory leak
-    for (int i = 0; i < image.height(); ++i)
-        delete [] latPixelsRemoved[i];
-    
-    delete [] latPixelsRemoved;
-    */
 }
 
 bool Retargeting::setImage(string path)
@@ -148,12 +105,12 @@ QImage Retargeting::energyFunction(QImage image)
     return energy;
 }
 
-void Retargeting::carveVertSeams(int widthDifference)
+bool Retargeting::carveVertSeams(int widthDifference)
 {
     if (!isImageSet())
     {
         cout << "there's no image to retarget" << endl;
-        return;
+        return false;
     }
     setEnergy(energyFunction(image));
 
@@ -163,7 +120,7 @@ void Retargeting::carveVertSeams(int widthDifference)
     QImage newImage = image.copy(0, 0, m, n);
     QImage oldImage;
 
-    QImage newEnergy = image.copy(0, 0, m, n);
+    QImage newEnergy = energy.copy(0, 0, m, n);
     QImage oldEnergy;
     
     //for storing cumulative energy matrices
@@ -177,6 +134,8 @@ void Retargeting::carveVertSeams(int widthDifference)
 
     for (int s = 0; s < widthDifference; s++)
     {
+        m -= s;
+
         vertSeams = new int*[m];
 
         for (int i = 0; i < m; ++i)
@@ -292,10 +251,20 @@ void Retargeting::carveVertSeams(int widthDifference)
                 if (i < 0 || i >= m)
                     exit(1);
 
+                //set minenergy for the first time
+                if (minEnergy < 0)
+                {
+                    minEnergy = seamEnergy;
+                    minEnergyCell = i;
+                }
+
                 //for the last row keep track of the lowest energy cell.  this is the first
                 //pixel for the seam that will be carved from the image bottom-up
-                if (j == n - 1 && seamEnergy > minEnergy)
+                if (j == n - 1 && seamEnergy < minEnergy)
+                {
                     minEnergyCell = i;
+                    minEnergy = seamEnergy;
+                }
 
                 vertSeams[i][j] = seamEnergy;
                 vertCarvingDirections[i][j] = direction;
@@ -308,44 +277,6 @@ void Retargeting::carveVertSeams(int widthDifference)
         }
         vertSeamsFile.close();
         vertSeamDirectionsFilestream.close();
-
-        /*
-        vector<pair<int, int> > lowestEnergies;
-
-        //find the
-        for (int i = 0; i < m; i++)
-        {
-            int energyVal = vertSeams[i][n - 1];
-
-            //push (energy, index)
-            lowestEnergies.push_back(pair<int, int> (energyVal, i));
-        }
-
-        sort(lowestEnergies.begin(), lowestEnergies.end());
-        lowestEnergies.erase(lowestEnergies.begin() + widthDifference, lowestEnergies.end());
-
-        ofstream outFile3;
-        char outputFilename3[] = "C:\\Users\\Andrew\\Documents\\lowestEnergies.txt";
-        outFile3.open(outputFilename3, ios::out);
-
-        if (!outFile3)
-        {
-            cerr << "Can't open output file " << outputFilename3 << endl;
-            exit(1);
-        }
-        // print out content:
-        for (size_t x = 0; x < lowestEnergies.size(); ++x)
-            outFile3 << lowestEnergies[x].first << ", " << lowestEnergies[x].second << endl;
-
-        outFile3.close();
-        */
-
-        /*
-        if(widthDifference == highestEnergies.size())
-            cout << "if the vector of highest energies is sorted correctly then the seams can be carved" << endl;
-        else
-            cout << "the vector of highest energies doesn't have a starting pixel for each seam" << endl;
-        */
 
         //init the pixel mask
         vertPixelsRemoved = new bool*[m];
@@ -378,16 +309,20 @@ void Retargeting::carveVertSeams(int widthDifference)
             vertPixelsRemoved[column][j - 1] = true;
         }
 
+        //init pixel mask file
         ofstream vertPixelsRemovedFile;
         char vertPixelsRemovedFilename[] = "C:\\Users\\Andrew\\Documents\\vertPixelsRemoved.txt";
         vertPixelsRemovedFile.open(vertPixelsRemovedFilename, ios::out);
 
+        //pixel mask file can't be opened
         if (!vertPixelsRemovedFile)
         {
             cerr << "Can't open output file " << vertPixelsRemovedFilename << endl;
             exit(1);
         }
 
+        /*
+        //write pixel mask to file for examination
         for (int j = 0; j < n; j++)
         {
             for (int i = 0; i < m; i++)
@@ -395,7 +330,7 @@ void Retargeting::carveVertSeams(int widthDifference)
 
             vertPixelsRemovedFile << endl;
         }
-        vertPixelsRemovedFile.close();
+        */
 
         //save the images before the seam's carved
         oldImage = newImage.copy(0, 0, m, n);
@@ -406,25 +341,43 @@ void Retargeting::carveVertSeams(int widthDifference)
         newImage = QImage(m - 1, n, oldImage.format());
         newEnergy = QImage(m - 1, n, oldEnergy.format());
 
-        //this is untested as of 6:46pm Saturday (EST) 11/10/2012
         for (int j = 0; j < n; j++)
         {
+            bool seamFound = false;
+
             for (int i = 0; i < m; i++)
             {
                 if (vertPixelsRemoved[i][j])
-                    i++;
+                {
+                    seamFound = true;
+                    continue;
+                }
 
-                newImage.setPixel(i, j, oldImage.pixel(i, j));
-                newEnergy.setPixel(i, j, oldEnergy.pixel(i, j));
+                //if the seam's already been carved out the pixels will have been
+                //shifted leftward in the new image
+                if (seamFound)
+                    newImage.setPixel(i - 1, j, oldImage.pixel(i, j));
+                else
+                    newImage.setPixel(i, j, oldImage.pixel(i, j));
+
                 vertPixelsRemovedFile << vertPixelsRemoved[i][j] << " ";
             }
-
             vertPixelsRemovedFile << endl;
         }
-
-        //decrement width because a vertical seam has been carved out
-        m--;
+        vertPixelsRemovedFile.close();
+        newEnergy = energyFunction(newImage);
     }
+    retargetedImage = newImage;
+    retargetSuccess = true;
+    return retargetSuccess;
+}
+
+QImage Retargeting::getRetargetedImage(){
+    return retargetedImage;
+}
+
+bool Retargeting::isRetargetSuccessful(){
+    return retargetSuccess;
 }
 
 void Retargeting::setVerticalSeamTable(int m, int n)
@@ -433,9 +386,6 @@ void Retargeting::setVerticalSeamTable(int m, int n)
 
 void Retargeting::carveLatSeams(int heightDifference)
 {
-    //int** latSeams;
-    //int** latCarvingDirections;
-    //bool** latPixelsRemoved;
 }
 
 void Retargeting::setLateralSeamTable(int m, int n)

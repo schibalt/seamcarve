@@ -24,7 +24,6 @@ private:
     bool showImage(QImage image);
     QGraphicsScene *scene;
     void writePix(QImage image);
-    //QProgressBar *progressBar;
 private slots:
     void on_actionNew_triggered();
     void on_retargetButton_clicked();

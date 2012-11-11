@@ -19,16 +19,6 @@ RetargetWindow::RetargetWindow()
     widget.setupUi(this);
     scene = new QGraphicsScene(this);
     widget.graphicsView->setScene(scene);
-
-    /*
-    connect(this->widget.actionNew, SIGNAL(triggered(bool)), this, SLOT(actionNew_Triggered()));
-    connect(this->widget.showImageButton, SIGNAL(clicked()), this, SLOT(eFuncButton_clicked()));
-    connect(this->widget.showEFuncButton, SIGNAL(clicked()), this, SLOT(showButton_clicked()));
-    */
-
-    //progressBar = new QProgressBar();
-    //cout<<progressBar->maximum()<<endl;
-    //widget.statusbar->addWidget( progressBar, 1 );
 }
 
 RetargetWindow::~RetargetWindow()
@@ -97,35 +87,6 @@ void RetargetWindow::writePix(QImage image)
     cout << "image width = " << width << endl;
     widget.progressBar->setTextVisible(true);
 
-    /*
-    char hexval [8];
-    string rgbval;
-    int asint;
-
-    for (float i = 0; i < width; i++)
-    {
-        for (int j = 0; j < image.height(); j++)
-        {
-            //convert int to hex
-            sprintf(hexval,"%X", image.pixel(i, j));
-
-            //trunc 1st 2 numbers
-            rgbval =((string) hexval).substr(2,6);
-
-            //convert string to hex
-            stringstream intstrm;
-            intstrm << hex << rgbval;
-
-            //stream to int var
-            intstrm >> asint;
-
-            //cout << asint <<" (" << rgbval <<") ";
-        }
-        widget.progressBar->setValue((i / width)*100);
-        //cout << "progress = " << (i / width)*100 << endl;
-        //cout << endl;
-    }
-    */
     widget.progressBar->setValue(100);
 }
 
@@ -147,6 +108,7 @@ void RetargetWindow::on_showEFuncButton_clicked()
         return;
     }
     retarget.setEnergy(retarget.energyFunction(retarget.getImage()));
+
     // the items (lines and points) in the graphicsview
     QList<QGraphicsItem*> list = (*scene).items();
 
@@ -164,6 +126,7 @@ void RetargetWindow::on_showEFuncButton_clicked()
     QGraphicsPixmapItem* Qgpmi = new QGraphicsPixmapItem(QPixmap::fromImage(image));
     (*scene).addItem(Qgpmi);
     widget.graphicsView->setSceneRect(QRect(0, 0, image.width(), image.height()));
+
     QString imgPath;
     stringstream ss;
     ss << (int) image.format();
@@ -187,12 +150,18 @@ void RetargetWindow::on_retargetButton_clicked()
 
     int widthDiff = widget.graphicsView->width() - retarget.getImage().width();
 
+    QImage retargetedImage;
+    bool retargetSuccess;
+
     if (widthDiff < 0)
     {
         viewTooSkinny = true;
         cout << "making vert seam matrix" << endl;
-        retarget.carveVertSeams(abs(widthDiff));
+        retargetSuccess = retarget.carveVertSeams(abs(widthDiff));
     }
+
+    if(retargetSuccess)
+        retargetedImage = retarget.getRetargetedImage();
 
     /*
     int heightDiff = widget.graphicsView->height() - retarget.getImage().height();
@@ -205,6 +174,24 @@ void RetargetWindow::on_retargetButton_clicked()
         retarget.setLatSeams(abs(heightDiff));
     }
     */
+
+    // the items (lines and points) in the graphicsview
+    QList<QGraphicsItem*> list = (*scene).items();
+
+    // delete everything.  this is a new case.
+    QList<QGraphicsItem*>::Iterator it = list.begin();
+    for (; it != list.end(); ++it)
+    {
+        if (*it)
+        {
+            (*scene).removeItem(*it);
+            delete *it;
+        }
+    }
+
+    QGraphicsPixmapItem* Qgpmi = new QGraphicsPixmapItem(QPixmap::fromImage(retargetedImage));
+    (*scene).addItem(Qgpmi);
+    widget.graphicsView->setSceneRect(QRect(0, 0, retargetedImage.width(), retargetedImage.height()));
 
     //status bar info
     if (!viewTooShort && !viewTooSkinny)
