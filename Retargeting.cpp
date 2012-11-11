@@ -54,17 +54,17 @@ void Retargeting::setEnergy(QImage energy)
     this->energy = energy;
 }
 
-QImage Retargeting::energyFunction(QImage image)
+QImage Retargeting::energyFunction(QImage localImage)
 {
     //there are usually m rows in a matrix but QImage uses cartesian coordinates
     //so there are m columns (x-sub-m)
-    int m = image.width();
+    int m = localImage.width();
     
     //vice versa with n (n is y-sub-n)
-    int n = image.height();
+    int n = localImage.height();
     
-    cout << "copying.  width = " << image.width() << " height = " << image.height() << endl;
-    energy = image.copy(0, 0, image.width(), image.height());
+    cout << "copying.  width = " << localImage.width() << " height = " << localImage.height() << endl;
+    QImage localEnergy = localImage.copy(0, 0, localImage.width(), localImage.height());
     
     int upComp = 0;
     int downComp = 0;
@@ -77,16 +77,16 @@ QImage Retargeting::energyFunction(QImage image)
         for (int j = 0; j < n; j++)
         {
             if (i > 0)
-                upComp = qGray(image.pixel(i, j)) - qGray(image.pixel(i - 1, j));
+                upComp = qGray(localImage.pixel(i, j)) - qGray(localImage.pixel(i - 1, j));
                 
             if (i < m - 1)
-                downComp = qGray(image.pixel(i, j)) - qGray(image.pixel(i + 1, j));
+                downComp = qGray(localImage.pixel(i, j)) - qGray(localImage.pixel(i + 1, j));
                 
             if (j > 0)
-                leftComp = qGray(image.pixel(i, j)) - qGray(image.pixel(i, j - 1));
+                leftComp = qGray(localImage.pixel(i, j)) - qGray(localImage.pixel(i, j - 1));
                 
             if (j < n - 1)
-                rightComp = qGray(image.pixel(i, j)) - qGray(image.pixel(i , j + 1));
+                rightComp = qGray(localImage.pixel(i, j)) - qGray(localImage.pixel(i , j + 1));
                 
             energyVal = abs(upComp + downComp + leftComp + rightComp);
             
@@ -96,13 +96,13 @@ QImage Retargeting::energyFunction(QImage image)
             if (energyVal < 0)
                 energyVal = 0;
                 
-            if (energy.format() != 3)
-                energy.setPixel(i, j, qRgb(energyVal, energyVal, energyVal));
+            if (localEnergy.format() != 3)
+                localEnergy.setPixel(i, j, qRgb(energyVal, energyVal, energyVal));
             else
-                energy.setPixel(i, j, energyVal);
+                localEnergy.setPixel(i, j, energyVal);
         }
         
-    return energy;
+    return localEnergy;
 }
 
 bool Retargeting::carveVertSeams(int widthDifference)
@@ -134,6 +134,7 @@ bool Retargeting::carveVertSeams(int widthDifference)
 
     for (int s = 0; s < widthDifference; s++)
     {
+        int format = image.format();
 
         vertSeams = new int*[m];
 
@@ -163,7 +164,7 @@ bool Retargeting::carveVertSeams(int widthDifference)
         if (!vertSeamsFile)
         {
             cerr << "Can't open output file " << vertSeamsFilename << endl;
-            exit(1);
+            exit(EXIT_FAILURE);
         }
 
         ofstream vertSeamDirectionsFilestream;
@@ -174,7 +175,7 @@ bool Retargeting::carveVertSeams(int widthDifference)
         if (!vertSeamDirectionsFilestream)
         {
             cerr << "Can't open output file " << vertSeamDirectionsFilename << endl;
-            exit(1);
+            exit(EXIT_FAILURE);
         }
 
         int minEnergyCell = -1;
@@ -193,10 +194,7 @@ bool Retargeting::carveVertSeams(int widthDifference)
         {
             for (int i = 0; i < m; i++)
             {
-                if (newEnergy.format() != 3)
-                    pixelEnergy = qGray(newEnergy.pixel(i, j));
-                else
-                    pixelEnergy = newEnergy.pixel(i, j);
+                pixelEnergy = qGray(newEnergy.pixel(i, j));
 
                 if (j == 0)
                 {
@@ -313,6 +311,7 @@ bool Retargeting::carveVertSeams(int widthDifference)
         ofstream vertPixelsRemovedFile;
         char vertPixelsRemovedFilename[] = "C:\\Users\\Andrew\\Documents\\vertPixelsRemoved.txt";
         vertPixelsRemovedFile.open(vertPixelsRemovedFilename, ios::out);
+        vertPixelsRemovedFile << "s:" << s << endl;
 
         //pixel mask file can't be opened
         if (!vertPixelsRemovedFile)
@@ -321,19 +320,21 @@ bool Retargeting::carveVertSeams(int widthDifference)
             exit(1);
         }
 
-        /*
-        //write pixel mask to file for examination
-        for (int j = 0; j < n; j++)
+        //init pixel mask file
+        ofstream vertPixelsSetFilestream;
+        char vertPixelsSetFilename[] = "C:\\Users\\Andrew\\Documents\\vertPixelsSet.txt";
+        vertPixelsSetFilestream.open(vertPixelsSetFilename, ios::out);
+        vertPixelsSetFilestream << "s:" << s << endl;
+
+        //pixel mask file can't be opened
+        if (!vertPixelsSetFilestream)
         {
-            for (int i = 0; i < m; i++)
-                vertPixelsRemovedFile << vertPixelsRemoved[i][j] << " ";
-
-            vertPixelsRemovedFile << endl;
+            cerr << "Can't open output file " << vertPixelsSetFilename << endl;
+            exit(EXIT_FAILURE);
         }
-        */
 
-        oldImage = QImage(m, n, newImage.format());
-        oldEnergy = QImage(m, n, newEnergy.format());
+        //oldImage = QImage(m, n, newImage.format());
+        //oldEnergy = QImage(m, n, newEnergy.format());
 
         //save the images before the seam's carved
         oldImage = newImage.copy(0, 0, m, n);
@@ -343,6 +344,14 @@ bool Retargeting::carveVertSeams(int widthDifference)
         //(minus the seam that is being carved out per the pixel mask)
         newImage = QImage(m - 1, n, oldImage.format());
         newEnergy = QImage(m - 1, n, oldEnergy.format());
+
+        if (newImage.format() == 3)
+        {
+            newEnergy.setNumColors(oldImage.numColors());
+            newImage.setNumColors(oldImage.numColors());
+            newEnergy.setColorTable(oldImage.colorTable());
+            newImage.setColorTable(oldImage.colorTable());
+        }
 
         for (int j = 0; j < n; j++)
         {
@@ -361,26 +370,64 @@ bool Retargeting::carveVertSeams(int widthDifference)
                 //if the seam's already been carved out the pixels will have been
                 //shifted leftward in the new image
                 if (seamFound)
-                    newImage.setPixel(i - 1, j, oldImage.pixel(i, j));
+                {
+                    int pixelValue = oldImage.pixel(i, j);
+
+                    if (newImage.format() == 3)
+                    {
+                        pixelValue = qGray(pixelValue);
+
+                        if (pixelValue > 255)
+                            pixelValue = 255;
+
+                        if (pixelValue < 0)
+                            pixelValue = 0;
+                    }
+                    vertPixelsSetFilestream << pixelValue << " ";
+                    newImage.setPixel(i - 1, j, pixelValue);
+                }
                 else
-                    newImage.setPixel(i, j, oldImage.pixel(i, j));
-            }
-            vertPixelsRemovedFile << endl;
-        }
+                {
+                    int pixelValue = oldImage.pixel(i, j);
+
+                    if (oldImage.format() == 3)
+                    {
+                        pixelValue = qGray(pixelValue);
+
+                        if (pixelValue > 255)
+                            pixelValue = 255;
+
+                        if (pixelValue < 0)
+                            pixelValue = 0;
+                    }
+
+                    vertPixelsSetFilestream << pixelValue << " ";
+                    newImage.setPixel(i, j, pixelValue);
+                    //localEnergy.setPixel(i, j, energyVal);}
+                    //localEnergy.setPixel(i, j, qRgb(energyVal, energyVal, energyVal));
+                }
+            } //row done
+
+            vertPixelsRemovedFile << "j:" << j << endl;
+            vertPixelsSetFilestream << "j:" << j << endl;
+        }//seam done
         vertPixelsRemovedFile.close();
+        vertPixelsSetFilestream.close();
         newEnergy = energyFunction(newImage);
         m--;
-    }
+    }//all seams done
     retargetedImage = newImage;
     retargetSuccess = true;
     return retargetSuccess;
 }
 
-QImage Retargeting::getRetargetedImage(){
+QImage Retargeting::getRetargetedImage()
+{
     return retargetedImage;
 }
 
-bool Retargeting::isRetargetSuccessful(){
+bool Retargeting::isRetargetSuccessful()
+{
     return retargetSuccess;
 }
 
