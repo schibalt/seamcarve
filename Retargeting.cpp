@@ -64,7 +64,7 @@ QImage Retargeting::energyFunction(QImage localImage)
     //vice versa with n (n is y-sub-n)
     int n = localImage.height();
     
-    cout << "copying.  width = " << localImage.width() << " height = " << localImage.height() << endl;
+    //cout << "copying.  width = " << localImage.width() << " height = " << localImage.height() << endl;
     QImage localEnergy = localImage.copy(0, 0, localImage.width(), localImage.height());
     
     int upComp = 0;
