@@ -147,19 +147,39 @@ void RetargetWindow::on_retargetButton_clicked()
 
     cout << "view is " << viewWidth << ", " << viewHeight;
 
+    bool retargetSuccess = retarget.isRetargetSuccessful();
+
     int imageWidth = retarget.getImage().width();
     int imageHeight = retarget.getImage().height();
 
-    cout << " and image is " << imageWidth << ", " << imageHeight << endl;
+    QImage retargetedImage;
+    int retargetedWidth;
+    int retargetedHeight;
 
-    int widthDiff = viewWidth - imageWidth;
+    int widthDiff;
+    int heightDiff;
+
+    if (retargetSuccess)
+    {
+        retargetedImage = retarget.getRetargetedImage();
+        retargetedWidth = retargetedImage.width();
+        retargetedHeight = retargetedImage.height();
+
+        cout << " and retargeted image is " << retargetedWidth << ", " << retargetedHeight << endl;
+        widthDiff = viewWidth - retargetedWidth;
+        heightDiff = viewHeight - retargetedHeight;
+    }
+    else
+    {
+        cout << " and image is " << imageWidth << ", " << imageHeight << endl;
+        widthDiff = viewWidth - imageWidth;
+        heightDiff = viewHeight - imageHeight;
+    }
 
     bool viewTooSkinny = false;
 
     if (widthDiff < 0)
         viewTooSkinny = true;
-
-    int heightDiff = viewHeight - imageHeight;
 
     bool viewTooShort = false;
 
@@ -191,16 +211,10 @@ void RetargetWindow::on_retargetButton_clicked()
 
         widget.statusbar->showMessage(QString::fromStdString(ss.str()));
     }
-
-    bool retargetSuccess = false;
     int offset = 2;
 
     if (viewTooSkinny)
         retargetSuccess = retarget.carveVertSeams(abs(widthDiff) + offset);
-
-    QImage retargetedImage;
-    int retargetedWidth;
-    int retargetedHeight;
 
     if (retargetSuccess)
     {
